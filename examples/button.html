@@ -1,0 +1,521 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
+  <script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+  <script src="js/leap-plugins-0.1.11pre.js"></script>
+  <script src="../build/leap-widgets-0.1.0.js"></script>
+  <script src="js/OrbitControls.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+    }
+    canvas.leap-boneHand{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #view-source {
+      position: absolute;
+      top: 0;
+      right: 0;
+      margin: 10px;
+      z-index: 10;
+    }
+  </style>
+
+</head>
+<body>
+</body>
+
+<script>
+'use strict';
+
+  // Set up plugins
+
+  Leap.loop({background: true})
+    .use('transform', {
+      vr: 'desktop' // Switch to meters.
+    })
+    .use('boneHand', {
+      targetEl: document.body,
+      jointColor: new THREE.Color(0xffffff),
+      rendererOps: {antialias: true}
+    })
+    .use('proximity');
+
+  // Set up scene
+  var scene = Leap.loopController.plugins.boneHand.scene;
+  var camera = Leap.loopController.plugins.boneHand.camera;
+  var renderer = Leap.loopController.plugins.boneHand.renderer;
+  camera.position.set( 0.15, 0.25, 2.0 );
+
+  // var controls = new THREE.OrbitControls( camera );
+
+  /*
+  un-comment if the axes needs to be seen
+  var axisHelper = new THREE.AxisHelper( 0.1 );
+  scene.add( axisHelper );
+  */
+
+  // Add a plane
+  var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
+  var material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide});
+  var buttonMesh = new THREE.Mesh(planeGeo, material);
+  buttonMesh.material.color.setHex(0x222222);
+
+  buttonMesh.name = "drum button";
+
+//  buttonMesh.scale.setY(0.5);
+
+//create buffer for sound & setup web Audio (|| allows use on safari in the case web audio isn't available)
+var drumBuffer = null;
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+var context = new AudioContext();
+
+//all sounds are loaded here, create a 'GET' request to a set URL(maybe user input in the future)
+function loadSound(url) {
+  var request = new XMLHttpRequest();
+  request.open('GET', url, true);
+  request.responseType = 'arraybuffer';
+
+  // Decode asynchronously, can also decode outise of load function
+  request.onload = function() {
+    context.decodeAudioData(request.response, function(buffer) {
+      drumBuffer = buffer;
+    });
+  }
+  //sends request for play function to use
+  request.send();
+}
+
+//Takes a buffer, sets that equal to the source, then connects source to destination (speakers, earphones, ... etc)
+//Add extra filters/synth sounds here. Then connect each filter to the destination
+function playSound(buffer) {
+  var source = context.createBufferSource();
+  source.buffer = buffer;
+  var dist = context.createWaveShaper();
+  dist.curve = makeDistortionCurve(90);
+  source.connect(dist);
+  dist.connect(context.destination);
+  source.connect(context.destination);
+  source.start(0);
+}
+
+//Distortion function, dont change for now(put in seperate function)
+function makeDistortionCurve( amount ) {
+  var k = typeof amount === 'number' ? amount : 0,
+    n_samples = 44100,
+    curve = new Float32Array(n_samples),
+    deg = Math.PI / 180,
+    i = 0,
+    x;
+  for ( ; i < n_samples; ++i ) {
+    x = i * 2 / n_samples - 1;
+    curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
+  }
+  return curve;
+};
+
+loadSound('drum02.wav');
+
+// Right Slider:
+// *********************************************************************
+var planeMesh = new THREE.Mesh(planeGeo, material);
+planeMesh.material.color.setHex(0xccccff);
+planeMesh.scale.set(2,2,2);
+planeMesh.name = "Right Slider";
+
+var longThrow = 0.05;
+
+planeMesh.position.set(0.7, -0.55, 0);
+
+scene.add(planeMesh);
+
+var plane = new InteractablePlane(planeMesh, Leap.loopController, {moveX: false, moveY: true, moveZ: false});
+
+// Coloumn 1:
+// *********************************************************************
+var circleGeo = new THREE.CircleGeometry(0.1, 32);
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.name = "round button";
+
+buttonMesh.position.set(-0.2, 0, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xeeeeee);
+
+});
+
+var circleGeo = new THREE.CircleGeometry(0.1, 32);
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.name = "round button";
+
+buttonMesh.position.set(-0.2, -0.225, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xeeeeee);
+
+});
+
+var circleGeo = new THREE.CircleGeometry(0.1, 32);
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.name = "round button";
+
+buttonMesh.position.set(-0.2, -0.45, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xeeeeee);
+
+});
+
+var circleGeo = new THREE.CircleGeometry(0.1, 32);
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.name = "round button";
+
+buttonMesh.position.set(-0.2, -0.675, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xeeeeee);
+
+});
+
+
+// Coloumn 2:
+// *********************************************************************
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF00FF);
+buttonMesh.name = "round button 3";
+
+buttonMesh.position.set(0.025, 0, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  playSound(drumBuffer);
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF00FF);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF00FF);
+buttonMesh.name = "round button 3";
+
+buttonMesh.position.set(0.025, -0.225, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF00FF);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF00FF);
+buttonMesh.name = "round button 3";
+
+buttonMesh.position.set(0.025, -0.45, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF00FF);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF00FF);
+buttonMesh.name = "round button 3";
+
+buttonMesh.position.set(0.025, -0.675, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF00FF);
+
+});
+
+// Coloumn 3:
+// *********************************************************************
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF0000);
+buttonMesh.name = "round button 2";
+
+buttonMesh.position.set(0.25, 0, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF0000);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF0000);
+buttonMesh.name = "round button 2";
+
+buttonMesh.position.set(0.25, -0.225, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF0000);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF0000);
+buttonMesh.name = "round button 2";
+
+buttonMesh.position.set(0.25, -0.45, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF0000);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0xFF0000);
+buttonMesh.name = "round button 2";
+
+buttonMesh.position.set(0.25, -0.675, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0xFF0000);
+
+});
+
+// Coloumn 4:
+// *********************************************************************
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0x0000FF);
+buttonMesh.name = "round button 4";
+
+buttonMesh.position.set(0.475, 0, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0x0000FF);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0x0000FF);
+buttonMesh.name = "round button 4";
+
+buttonMesh.position.set(0.475, -0.225, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0x0000FF);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0x0000FF);
+buttonMesh.name = "round button 4";
+
+buttonMesh.position.set(0.475, -0.45, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0x0000FF);
+
+});
+
+buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh.material.color.setHex(0x0000FF);
+buttonMesh.name = "round button 4";
+
+buttonMesh.position.set(0.475, -0.675, 0);
+scene.add(buttonMesh);
+
+var roundButton = new PushButton(
+  // for now, constructing with moveX and moveY turned off so that doesn't try and watch for XY intersections,
+  // which won't work for circles.
+  // todo - have a setter for moveX and moveY, so that proximities can be turned on and off.
+  // Note that we have to bind press and release effects to each individual button. This is a long way from CSS rules still.
+  new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+
+  mesh.material.color.setHex(0xccccff);
+
+}).on('release', function(mesh){
+
+  mesh.material.color.setHex(0x0000FF);
+
+});
+
+</script>
+
+</html>
