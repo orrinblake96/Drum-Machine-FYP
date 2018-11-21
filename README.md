@@ -1,1 +1,1 @@
-Drum machine using the leap-motion controller for user ineraction. 
+Drum machine using the leap-motion controller for user interaction. 
