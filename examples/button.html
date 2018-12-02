@@ -111,8 +111,7 @@ function makeDistortionCurve( amount ) {
   return curve;
 };
 
-loadSound('./drumButtonSounds/tinCanBeat.wav');
-playSound(drumBuffer);
+// loadSound('rapMumble.wav');
 
 // Right Slider:
 // *********************************************************************
@@ -131,17 +130,17 @@ var plane = new InteractablePlane(planeMesh, Leap.loopController, {moveX: false,
 
 // Coloumn 1 buttons:
 // *********************************************************************
-createRoundButton('button1-1', -0.25, 0.4, -0.05, 0xccccff, 0x222222);
-createRoundButton('button1-2', -0.25, 0.325, -0.05, 0xccccff, 0x222222);
-createRoundButton('button1-2', -0.25, 0.25, -0.05, 0xccccff, 0x222222);
+createRoundButton('button1-1', -0.25, 0.4, -0.05, 0xccccff, 0x222222, './drumButtonSounds/rapMumble.wav');
+createRoundButton('button1-2', -0.25, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/clap.wav');
+createRoundButton('button1-2', -0.25, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/drumBeat2.wav');
 
-createRoundButton('button2-1', -0.175, 0.4, -0.05, 0xccccff, 0x222222);
-createRoundButton('button2-2', -0.175, 0.325, -0.05, 0xccccff, 0x222222);
-createRoundButton('button2-2', -0.175, 0.25, -0.05, 0xccccff, 0x222222);
+createRoundButton('button2-1', -0.175, 0.4, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/buttonBeat.wav');
+createRoundButton('button2-2', -0.175, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/percussionLow.wav');
+createRoundButton('button2-2', -0.175, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/rapBeat2.wav');
 
-createRoundButton('button3-1', -0.10, 0.4, -0.05, 0xccccff, 0x222222);
-createRoundButton('button3-2', -0.10, 0.325, -0.05, 0xccccff, 0x222222);
-createRoundButton('button3-2', -0.10, 0.25, -0.05, 0xccccff, 0x222222);
+createRoundButton('button3-1', -0.10, 0.4, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/mumbleRapBeat.wav');
+createRoundButton('button3-2', -0.10, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/slowBeat.wav');
+createRoundButton('button3-2', -0.10, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/tinCanBeat.wav');
 
 //sliders
 createSlider('Distortion', 0, 0.247, -0.05, true, false, false);
@@ -153,12 +152,13 @@ function createSlider(name, x, y, z, xaxis, yaxis, zaxis, soundUrl){
   planeMesh.scale.set(0.5, 0.5, 0.5);
   planeMesh.name = name;
   var longThrow = 0.05;
-  planeMesh.position.set(x, y, z); 
+  planeMesh.position.set(x, y, z);
   scene.add(planeMesh);
   new InteractablePlane(planeMesh, Leap.loopController, {moveX: xaxis, moveY: yaxis, moveZ: zaxis});
 }
 
-function createRoundButton(name, x, y, z, colourPressed, colourReleased){
+function createRoundButton(name, x, y, z, colourPressed, colourReleased, loadUrl){
+  loadSound(loadUrl);
   let circleGeo = new THREE.CircleGeometry(0.035, 100);
   buttonMesh = new THREE.Mesh(circleGeo, material.clone());
   buttonMesh.name = name;
@@ -170,6 +170,7 @@ function createRoundButton(name, x, y, z, colourPressed, colourReleased){
     new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
 
+    playSound(drumBuffer);
     mesh.material.color.setHex(colourPressed);
 
   }).on('release', function(mesh){
