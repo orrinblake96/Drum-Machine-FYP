@@ -1,10 +1,10 @@
-/*!                                                              
- * LeapJS Widgets v0.1.0                                          
- * http://github.com/leapmotion/leapjs-widgets/                                
- *                                                                             
- * Copyright 2013 LeapMotion, Inc. and other contributors                      
- * Released under the Apache-2.0 license                                       
- * http://github.com/leapmotion/leapjs-widgets/blob/master/LICENSE             
+/*!
+ * LeapJS Widgets v0.1.0
+ * http://github.com/leapmotion/leapjs-widgets/
+ *
+ * Copyright 2013 LeapMotion, Inc. and other contributors
+ * Released under the Apache-2.0 license
+ * http://github.com/leapmotion/leapjs-widgets/blob/master/LICENSE
  */
 (function() {
   'use strict';
@@ -1560,7 +1560,7 @@ THREE.CircleGeometry.prototype.area = function () {
 };
 
 THREE.Mesh.prototype.border = function(lineMaterial){
-  
+
   var lineGeo = new THREE.Geometry();
   lineGeo.vertices.push(
     this.geometry.corners()[0],
@@ -1598,7 +1598,7 @@ THREE.Mesh.prototype.border = function(lineMaterial){
     this.geometry.corners()[7]
   );
   this.add(new THREE.Line(lineGeo, lineMaterial));
-  
+
 }
 // Adds a method to THREE.Mesh which figures out if a line segment intersects it.
 
