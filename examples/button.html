@@ -28,12 +28,50 @@
 
 <script>
 'use strict';
-
-let width = window.innerWidth;
-let height = window.innerHeight;
   // Set up plugins
 
-  Leap.loop({background: true})
+  Leap.loop({
+
+    hand: function(hand){
+
+      let indexF = hand.indexFinger.direction;
+      let oscillatorGainNode = context.createGain();
+      let distortionGainNode = context.createGain();
+      let distortionNode = context.createWaveShaper();
+
+      function playSineWave(tone, distortionAmount) {
+        let oscillator = context.createOscillator();
+        distortionNode.curve = makeDistortionCurve(distortionAmount);
+
+        oscillator.type = 'sine';
+        tone > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
+        oscillator.connect(oscillatorGainNode);
+        oscillatorGainNode.connect(distortionGainNode);
+        distortionGainNode.connect(distortionNode);
+        oscillator.connect(distortionNode);
+        oscillator.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.6);
+      }
+
+      function makeDistortionCurve( amount ) {
+        var k = typeof amount === 'number' ? amount : 0,
+          n_samples = 44100,
+          curve = new Float32Array(n_samples),
+          deg = Math.PI / 180,
+          i = 0,
+          x;
+        for ( ; i < n_samples; ++i ) {
+          x = i * 2 / n_samples - 1;
+          curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
+        }
+        return curve;
+      };
+
+      playSineWave((indexF[0]) * 1000, (indexF[1]) * 2000);
+    }
+
+  })
     .use('transform', {
       vr: 'desktop' // Switch to meters.
     })
@@ -42,7 +80,15 @@ let height = window.innerHeight;
       jointColor: new THREE.Color(0xffffff),
       rendererOps: {antialias: true}
     })
-    .use('proximity');
+    .use('handEntry')
+    .on('handFound', function (hand){
+      {console.log( 'hand found', hand ); }
+    })
+    .on('handLost', function (hand){
+      {console.log( 'hand lost', hand ); }
+    })
+    .use('screenPosition', {positioning: 'absolute'});
+
 
   // Set up scene
   var scene = Leap.loopController.plugins.boneHand.scene;
@@ -93,6 +139,7 @@ function playSound(buffer) {
   source.connect(dist);
   dist.connect(context.destination);
   source.connect(context.destination);
+  source.loop = true;
   source.start(0);
 }
 
@@ -111,23 +158,6 @@ function makeDistortionCurve( amount ) {
   return curve;
 };
 
-// loadSound('rapMumble.wav');
-
-// Right Slider:
-// *********************************************************************
-var planeMesh = new THREE.Mesh(planeGeo, material);
-planeMesh.material.color.setHex(0x222222);
-planeMesh.scale.set(2,2,2);
-planeMesh.name = "Right Slider";
-
-var longThrow = 0.05;
-
-planeMesh.position.set(0.7, -0.55, 0);
-
-scene.add(planeMesh);
-
-var plane = new InteractablePlane(planeMesh, Leap.loopController, {moveX: false, moveY: true, moveZ: false});
-
 // Coloumn 1 buttons:
 // *********************************************************************
 createRoundButton('button1-1', -0.25, 0.4, -0.05, 0xccccff, 0x222222, './drumButtonSounds/rapMumble.wav');
@@ -142,20 +172,20 @@ createRoundButton('button3-1', -0.10, 0.4, -0.05, 0xccccff, 0x222222,'./drumButt
 createRoundButton('button3-2', -0.10, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/slowBeat.wav');
 createRoundButton('button3-2', -0.10, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/tinCanBeat.wav');
 
-//sliders
-createSlider('Distortion', 0, 0.247, -0.05, true, false, false);
+// //sliders
+// createSlider('Distortion', 0, 0.247, -0.05, true, false, false);
 
-function createSlider(name, x, y, z, xaxis, yaxis, zaxis, soundUrl){
-  var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
-  var planeMesh = new THREE.Mesh(planeGeo, material);
-  planeMesh.material.color.setHex(0x222222);
-  planeMesh.scale.set(0.5, 0.5, 0.5);
-  planeMesh.name = name;
-  var longThrow = 0.05;
-  planeMesh.position.set(x, y, z);
-  scene.add(planeMesh);
-  new InteractablePlane(planeMesh, Leap.loopController, {moveX: xaxis, moveY: yaxis, moveZ: zaxis});
-}
+// function createSlider(name, x, y, z, xaxis, yaxis, zaxis, soundUrl){
+//   var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
+//   var planeMesh = new THREE.Mesh(planeGeo, material);
+//   planeMesh.material.color.setHex(0x222222);
+//   planeMesh.scale.set(0.5, 0.5, 0.5);
+//   planeMesh.name = name;
+//   var longThrow = 0.05;
+//   planeMesh.position.set(x, y, z);
+//   scene.add(planeMesh);
+//   new InteractablePlane(planeMesh, Leap.loopController, {moveX: xaxis, moveY: yaxis, moveZ: zaxis});
+// }
 
 function createRoundButton(name, x, y, z, colourPressed, colourReleased, loadUrl){
   loadSound(loadUrl);
@@ -174,7 +204,7 @@ function createRoundButton(name, x, y, z, colourPressed, colourReleased, loadUrl
     mesh.material.color.setHex(colourPressed);
 
   }).on('release', function(mesh){
-
+    
     mesh.material.color.setHex(colourReleased);
 
   });
