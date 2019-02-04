@@ -34,7 +34,10 @@
 
     hand: function(hand){
 
+      if (hand.type === "right") {
+
       let indexF = hand.indexFinger.direction;
+      console.log(Math.abs((indexF[0]) * 1000), (indexF[1]) * 3000);
       let oscillatorGainNode = context.createGain();
       let distortionGainNode = context.createGain();
       let distortionNode = context.createWaveShaper();
@@ -44,7 +47,7 @@
         distortionNode.curve = makeDistortionCurve(distortionAmount);
 
         oscillator.type = 'sine';
-        tone > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
+        tone > 100 && distortionAmount > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
         oscillator.connect(oscillatorGainNode);
         oscillatorGainNode.connect(distortionGainNode);
         distortionGainNode.connect(distortionNode);
@@ -68,8 +71,9 @@
         return curve;
       };
 
-      playSineWave((indexF[0]) * 1000, (indexF[1]) * 2000);
+      playSineWave(Math.abs((indexF[0]) * 1000), (indexF[1]) * 2000);
     }
+  }
 
   })
     .use('transform', {
@@ -80,20 +84,20 @@
       jointColor: new THREE.Color(0xffffff),
       rendererOps: {antialias: true}
     })
-    .use('handEntry')
-    .on('handFound', function (hand){
-      {console.log( 'hand found', hand ); }
-    })
-    .on('handLost', function (hand){
-      {console.log( 'hand lost', hand ); }
-    })
+    // .use('handEntry')
+    // .on('handFound', function (hand){
+    //   {console.log( 'hand found', hand ); }
+    // })
+    // .on('handLost', function (hand){
+    //   {console.log( 'hand lost', hand ); }
+    // })
     .use('screenPosition', {positioning: 'absolute'});
-
 
   // Set up scene
   var scene = Leap.loopController.plugins.boneHand.scene;
   var camera = Leap.loopController.plugins.boneHand.camera;
   var renderer = Leap.loopController.plugins.boneHand.renderer;
+  var sources = [];
 
   camera.position.set( -0.034, 0.45, 0.50 );
 
@@ -131,16 +135,16 @@ function loadSound(url) {
 
 //Takes a buffer, sets that equal to the source, then connects source to destination (speakers, earphones, ... etc)
 //Add extra filters/synth sounds here. Then connect each filter to the destination
-function playSound(buffer) {
-  var source = context.createBufferSource();
-  source.buffer = buffer;
+function playSound(buffer, play) {
+  var audio = context.createBufferSource();
+  audio.buffer = buffer;
   var dist = context.createWaveShaper();
   dist.curve = makeDistortionCurve(90);
-  source.connect(dist);
+  audio.connect(dist);
   dist.connect(context.destination);
-  source.connect(context.destination);
-  source.loop = true;
-  source.start(0);
+  audio.connect(context.destination);
+  audio.loop = play;
+  audio.start(0);
 }
 
 //Distortion function, dont change for now(put in seperate function)
@@ -172,21 +176,6 @@ createRoundButton('button3-1', -0.10, 0.4, -0.05, 0xccccff, 0x222222,'./drumButt
 createRoundButton('button3-2', -0.10, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/slowBeat.wav');
 createRoundButton('button3-2', -0.10, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/tinCanBeat.wav');
 
-// //sliders
-// createSlider('Distortion', 0, 0.247, -0.05, true, false, false);
-
-// function createSlider(name, x, y, z, xaxis, yaxis, zaxis, soundUrl){
-//   var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
-//   var planeMesh = new THREE.Mesh(planeGeo, material);
-//   planeMesh.material.color.setHex(0x222222);
-//   planeMesh.scale.set(0.5, 0.5, 0.5);
-//   planeMesh.name = name;
-//   var longThrow = 0.05;
-//   planeMesh.position.set(x, y, z);
-//   scene.add(planeMesh);
-//   new InteractablePlane(planeMesh, Leap.loopController, {moveX: xaxis, moveY: yaxis, moveZ: zaxis});
-// }
-
 function createRoundButton(name, x, y, z, colourPressed, colourReleased, loadUrl){
   loadSound(loadUrl);
   let circleGeo = new THREE.CircleGeometry(0.035, 100);
@@ -200,11 +189,12 @@ function createRoundButton(name, x, y, z, colourPressed, colourReleased, loadUrl
     new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
 
-    playSound(drumBuffer);
+    playSound(drumBuffer, true);
     mesh.material.color.setHex(colourPressed);
 
   }).on('release', function(mesh){
-    
+
+    // playSound(drumBuffer, false);
     mesh.material.color.setHex(colourReleased);
 
   });
