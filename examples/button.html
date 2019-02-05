@@ -84,13 +84,6 @@
       jointColor: new THREE.Color(0xffffff),
       rendererOps: {antialias: true}
     })
-    // .use('handEntry')
-    // .on('handFound', function (hand){
-    //   {console.log( 'hand found', hand ); }
-    // })
-    // .on('handLost', function (hand){
-    //   {console.log( 'hand lost', hand ); }
-    // })
     .use('screenPosition', {positioning: 'absolute'});
 
   // Set up scene
@@ -101,16 +94,6 @@
 
   camera.position.set( -0.034, 0.45, 0.50 );
 
-  // var controls = new THREE.OrbitControls( camera );
-
-
-  // Add a plane
-  var planeGeo = new THREE.PlaneGeometry(0.1, 0.2);
-  var material = new THREE.MeshPhongMaterial({side: THREE.DoubleSide});
-  var buttonMesh = new THREE.Mesh(planeGeo, material);
-  buttonMesh.material.color.setHex(0x222222);
-
-  buttonMesh.name = "drum button";
 
 //create buffer for sound & setup web Audio (|| allows use on safari in the case web audio isn't available)
 var drumBuffer = null;
@@ -143,8 +126,12 @@ function playSound(buffer, play) {
   audio.connect(dist);
   dist.connect(context.destination);
   audio.connect(context.destination);
-  audio.loop = play;
+  // audio.loop = play;
   audio.start(0);
+}
+
+function stopSound() {
+
 }
 
 //Distortion function, dont change for now(put in seperate function)
@@ -164,41 +151,77 @@ function makeDistortionCurve( amount ) {
 
 // Coloumn 1 buttons:
 // *********************************************************************
-createRoundButton('button1-1', -0.25, 0.4, -0.05, 0xccccff, 0x222222, './drumButtonSounds/rapMumble.wav');
-createRoundButton('button1-2', -0.25, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/clap.wav');
-createRoundButton('button1-2', -0.25, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/drumBeat2.wav');
+// createRoundButton('button1-1', -0.25, 0.4, -0.05, 0xccccff, 0x222222, './drumButtonSounds/rapMumble.wav');
+// createRoundButton('button1-2', -0.25, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/clap.wav');
+// createRoundButton('button1-2', -0.25, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/drumBeat2.wav');
+//
+// createRoundButton('button2-1', -0.175, 0.4, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/buttonBeat.wav');
+// createRoundButton('button2-2', -0.175, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/percussionLow.wav');
+// createRoundButton('button2-2', -0.175, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/rapBeat2.wav');
+//
+// createRoundButton('button3-1', -0.10, 0.4, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/mumbleRapBeat.wav');
+// createRoundButton('button3-2', -0.10, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/slowBeat.wav');
+// createRoundButton('button3-2', -0.10, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/tinCanBeat.wav');
+//
+// function createRoundButton(name, x, y, z, colourPressed, colourReleased, loadUrl){
+//   loadSound(loadUrl);
+//   let circleGeo = new THREE.CircleGeometry(0.035, 100);
+//   buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+//   buttonMesh.name = name;
+//
+//   buttonMesh.position.set(x, y, z);
+//   scene.add(buttonMesh);
+//
+//   let roundButton = new PushButton(
+//     new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
+//   ).on('press', function(mesh){
+//
+//     playSound(drumBuffer, true);
+//     mesh.material.color.setHex(colourPressed);
+//
+//   }).on('release', function(mesh){
+//
+//     // playSound(drumBuffer, false);
+//     mesh.material.color.setHex(colourReleased);
+//
+//   });
+// }
 
-createRoundButton('button2-1', -0.175, 0.4, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/buttonBeat.wav');
-createRoundButton('button2-2', -0.175, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/percussionLow.wav');
-createRoundButton('button2-2', -0.175, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/rapBeat2.wav');
+// createRoundButton('button1-2', -0.25, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/clap.wav');
 
-createRoundButton('button3-1', -0.10, 0.4, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/mumbleRapBeat.wav');
-createRoundButton('button3-2', -0.10, 0.325, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/slowBeat.wav');
-createRoundButton('button3-2', -0.10, 0.25, -0.05, 0xccccff, 0x222222,'./drumButtonSounds/tinCanBeat.wav');
+let circleGeo = new THREE.CircleGeometry(0.035, 100);
+var material = new THREE.MeshPhongMaterial();
 
-function createRoundButton(name, x, y, z, colourPressed, colourReleased, loadUrl){
-  loadSound(loadUrl);
-  let circleGeo = new THREE.CircleGeometry(0.035, 100);
-  buttonMesh = new THREE.Mesh(circleGeo, material.clone());
-  buttonMesh.name = name;
-
-  buttonMesh.position.set(x, y, z);
+  var buttonMesh = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh.name = 'button1-1';
+  buttonMesh.material.color.setHex(0x222222);
+  buttonMesh.position.set(-0.25, 0.4, -0.05);
   scene.add(buttonMesh);
-
+  loadSound('./drumButtonSounds/rapMumble.wav');
   let roundButton = new PushButton(
     new InteractablePlane(buttonMesh, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-
     playSound(drumBuffer, true);
-    mesh.material.color.setHex(colourPressed);
-
+    mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
-
     // playSound(drumBuffer, false);
-    mesh.material.color.setHex(colourReleased);
-
+    mesh.material.color.setHex(0x222222);
   });
-}
+
+  var buttonMesh1_2 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh1_2.name = 'button1-2';
+  buttonMesh1_2.material.color.setHex(0x222222);
+  buttonMesh1_2.position.set(-0.25, 0.325, -0.05);
+  scene.add(buttonMesh1_2);
+  loadSound('./drumButtonSounds/clap.wav');
+  let roundButton1_2 = new PushButton(
+    new InteractablePlane(buttonMesh1_2, Leap.loopController, {moveX: false, moveY: false})
+  ).on('press', function(mesh){
+    playSound(drumBuffer, true);
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh){
+    mesh.material.color.setHex(0x222222);
+  });
 
 </script>
 
