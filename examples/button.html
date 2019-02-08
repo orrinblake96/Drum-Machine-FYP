@@ -6,7 +6,6 @@
   <script src="js/leap-plugins-0.1.11pre.js"></script>
   <script src="../build/leap-widgets-0.1.0.js"></script>
   <script src="js/OrbitControls.js"></script>
-  <!-- <script src="./js/buttonCreation.js"></script> -->
 
   <style>
     body {
@@ -31,6 +30,18 @@
       height: 100%;
       background: #262626;
     }
+    audio {
+      position: fixed;
+      left: 10px;
+      bottom: 10px;
+      width: calc(100% - 20px);
+    }
+    #thefile {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 100;
+    }
   </style>
 </head>
 
@@ -38,11 +49,36 @@
   <div id="particles-js"></div>
   <script type="text/javascript" src="js/particles.js"></script>
   <script type="text/javascript" src="js/app.js"></script>
+
+  <div id="content">
+  <input type="file" id="thefile" accept="audio/*" />
+  <audio controls id="audio" ></audio>
 </body>
 
 <script>
 'use strict';
   // Set up plugins
+window.onload = function() {
+
+var file = document.getElementById("thefile");
+var audio = document.getElementById("audio");
+
+file.onchange = function() {
+  var files = this.files;
+  audio.src = URL.createObjectURL(files[0]);
+  audio.load();
+  audio.play();
+  var context = new AudioContext();
+  var src = context.createMediaElementSource(audio);
+  var analyser = context.createAnalyser();
+
+  src.connect(analyser);
+  analyser.connect(context.destination);
+
+  audio.play();
+  };
+}
+
 
   Leap.loop({
 
