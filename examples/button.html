@@ -6,43 +6,8 @@
   <script src="js/leap-plugins-0.1.11pre.js"></script>
   <script src="../build/leap-widgets-0.1.0.js"></script>
   <script src="js/OrbitControls.js"></script>
-
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-    }
-    canvas {
-      display: block;
-      vertical-align: bottom;
-    }
-    canvas.leap-boneHand{
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-    #particles-js {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: #262626;
-    }
-    audio {
-      position: fixed;
-      left: 10px;
-      bottom: 10px;
-      width: calc(100% - 20px);
-    }
-    #thefile {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 100;
-    }
-  </style>
+  <script type="text/javascript" src="js/effects.js"></script>
+  <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 
 <body>
@@ -53,77 +18,42 @@
   <div id="content">
   <input type="file" id="thefile" accept="audio/*" />
   <audio controls id="audio" ></audio>
+  <p id ="xCords"></p>
 </body>
 
 <script>
 'use strict';
+
   // Set up plugins
-window.onload = function() {
-
-var file = document.getElementById("thefile");
-var audio = document.getElementById("audio");
-
-file.onchange = function() {
-  var files = this.files;
-  audio.src = URL.createObjectURL(files[0]);
-  audio.load();
-  audio.play();
-  var context = new AudioContext();
-  var src = context.createMediaElementSource(audio);
-  var analyser = context.createAnalyser();
-
-  src.connect(analyser);
-  analyser.connect(context.destination);
-
-  audio.play();
-  };
-}
-
-
   Leap.loop({
 
-    hand: function(hand){
+  //   hand: function(hand){
 
-      if (hand.type === "right") {
+  //     if (hand.type === "right") {
 
-      let indexF = hand.indexFinger.direction;
-      // console.log(Math.abs((indexF[0]) * 1000), (indexF[1]) * 2000);
-      let oscillatorGainNode = context.createGain();
-      let distortionGainNode = context.createGain();
-      let distortionNode = context.createWaveShaper();
+  //     let indexF = hand.indexFinger.direction;
+  //     let oscillatorGainNode = context.createGain();
+  //     let distortionGainNode = context.createGain();
+  //     let distortionNode = context.createWaveShaper();
 
-      function playSineWave(tone, distortionAmount) {
-        let oscillator = context.createOscillator();
-        distortionNode.curve = makeDistortionCurve(distortionAmount);
+  //     function playSineWave(tone, distortionAmount) {
+  //       let oscillator = context.createOscillator();
+  //       // distortionNode.curve = makeDistortionCurve(distortionAmount);
 
-        oscillator.type = 'sine';
-        tone > 100 && distortionAmount > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
-        oscillator.connect(oscillatorGainNode);
-        oscillatorGainNode.connect(distortionGainNode);
-        distortionGainNode.connect(distortionNode);
-        oscillator.connect(distortionNode);
-        oscillator.connect(context.destination);
-        oscillator.start();
-        oscillator.stop(context.currentTime + 0.6);
-      }
+  //       oscillator.type = 'sine';
+  //       tone > 100 && distortionAmount > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
+  //       oscillator.connect(oscillatorGainNode);
+  //       // oscillatorGainNode.connect(distortionGainNode);
+  //       // distortionGainNode.connect(distortionNode);
+  //       // oscillator.connect(distortionNode);
+  //       oscillator.connect(context.destination);
+  //       oscillator.start();
+  //       oscillator.stop(context.currentTime + 0.6);
+  //     }
 
-      function makeDistortionCurve( amount ) {
-        var k = typeof amount === 'number' ? amount : 0,
-          n_samples = 44100,
-          curve = new Float32Array(n_samples),
-          deg = Math.PI / 180,
-          i = 0,
-          x;
-        for ( ; i < n_samples; ++i ) {
-          x = i * 2 / n_samples - 1;
-          curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
-        }
-        return curve;
-      };
-
-      playSineWave(Math.abs((indexF[0]) * 1000), Math.abs((indexF[1]) * 2000));
-    }
-  }
+  //     playSineWave(Math.abs((indexF[0]) * 1000), Math.abs((indexF[1]) * 2000));
+  //   }
+  // }
 
   })
     .use('transform', {
@@ -146,8 +76,56 @@ file.onchange = function() {
 
   //set camera to face buttons
   camera.position.set( -0.034, 0.45, 0.50 );
+  
+  var controller = Leap.loop({enableGestures:true}, function(frame){
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    var context = new AudioContext();
 
-console.log(Leap.loopController);
+    if(frame.hands.length > 0) {
+      if(frame.hands[0].type === 'right') {
+        if(frame.hands[0].fingers[1]) {
+          let cords = Math.abs(frame.pointables[1].tipPosition[0] * 2000);
+          document.getElementById('xCords').innerHTML = cords;
+        }
+      }
+    }
+  //   if(frame.valid && frame.gestures.length > 0){
+  //   frame.gestures.forEach(function(gesture){
+  //       switch (gesture.type){
+  //         case "circle":
+  //             console.log("Circle Gesture");
+  //             break;
+  //         case "keyTap":
+  //             console.log("Key Tap Gesture");
+  //             break;
+  //         case "screenTap":
+  //             console.log("Screen Tap Gesture");
+  //             break;
+  //         case "swipe":
+  //             console.log("Swipe Gesture");
+  //             break;
+  //       }
+  //   });
+  // }
+  });
+
+  controller.on("gesture", function(gesture){
+        // switch (gesture.type){
+        //   // case "circle":
+        //   //     console.log("Circle Gesture");
+        //   //     break;
+        //   case "keyTap":
+        //       console.log("Key Tap Gesture");
+        //       break;
+        //   case "screenTap":
+        //       playSineWave2();
+        //       break;
+        //   case "swipe":
+        //       console.log("Swipe Gesture");
+        //       break;
+        // }
+});
+  
 //create buffer for sound & setup web Audio (|| allows use on safari in the case web audio isn't available)
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 var context = new AudioContext();
@@ -303,18 +281,52 @@ function loadDrumBeat2Sound(url) {
   request.send();
 }
 
+//load user added sound
+window.onload = function() {
+
+var file = document.getElementById("thefile");
+var audio = document.getElementById("audio");
+
+file.onchange = function() {
+  var files = this.files;
+  audio.src = URL.createObjectURL(files[0]);
+  audio.load();
+  var context = new AudioContext();
+  var src = context.createMediaElementSource(audio);
+  var analyser = context.createAnalyser();
+
+  src.connect(analyser);
+  analyser.connect(context.destination);
+
+  audio.play();
+  };
+}
+
 //Takes a buffer, sets that equal to the source, then connects source to destination (speakers, earphones, ... etc)
 //Add extra filters/synth sounds here. Then connect each filter to the destination
 function playSound(buffer, play) {
+  var xCords = (document.getElementById('xCords').innerHTML) * 10;
   var audio = context.createBufferSource();
   audio.buffer = buffer;
   var dist = context.createWaveShaper();
-  dist.curve = makeDistortionCurve(10);
-  audio.connect(dist);
-  dist.connect(context.destination);
-  audio.connect(context.destination);
-  audio.loop = play;
-  audio.start(0);
+  console.log(xCords);
+  if(xCords === 0){
+    xCords = 0;
+    dist.curve = makeDistortionCurve(xCords);
+    audio.connect(dist);
+    dist.connect(context.destination);
+    audio.connect(context.destination);
+    audio.loop = play;
+    audio.start(0);
+  } else {
+    dist.curve = makeDistortionCurve(xCords);
+    audio.connect(dist);
+    dist.connect(context.destination);
+    audio.connect(context.destination);
+    audio.loop = play;
+    audio.start(0);
+  }
+  
 }
 
 function stopSound() {
@@ -324,8 +336,6 @@ function stopSound() {
 
 let circleGeo = new THREE.CircleGeometry(0.035, 100);
 var material = new THREE.MeshPhongMaterial();
-
-
 
 var buttonMesh1_1 = new THREE.Mesh(circleGeo, material.clone());
 buttonMesh1_1.name = 'button1-1';
@@ -440,7 +450,7 @@ let roundButton3_1 = new PushButton(
 });
 
 let buttonMesh3_2 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh3_2.name = 'button3-1';
+buttonMesh3_2.name = 'button3-2';
 buttonMesh3_2.material.color.setHex(0xFF0000);
 buttonMesh3_2.position.set(-0.10, 0.325, -0.05);
 scene.add(buttonMesh3_2);
@@ -456,7 +466,7 @@ let roundButton3_2 = new PushButton(
 });
 
 let buttonMesh3_3 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh3_3.name = 'button3-1';
+buttonMesh3_3.name = 'button3-3';
 buttonMesh3_3.material.color.setHex(0xFF0000);
 buttonMesh3_3.position.set(-0.10, 0.25, -0.05);
 scene.add(buttonMesh3_3);
@@ -470,21 +480,6 @@ let roundButton3_3 = new PushButton(
   stopSound();
   mesh.material.color.setHex(0xFF0000);
 });
-
-//Distortion function, dont change for now(put in seperate function)
-function makeDistortionCurve( amount ) {
-  var k = typeof amount === 'number' ? amount : 0,
-    n_samples = 44100,
-    curve = new Float32Array(n_samples),
-    deg = Math.PI / 180,
-    i = 0,
-    x;
-  for ( ; i < n_samples; ++i ) {
-    x = i * 2 / n_samples - 1;
-    curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
-  }
-  return curve;
-};
 
 </script>
 

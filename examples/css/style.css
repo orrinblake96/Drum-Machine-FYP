@@ -1,13 +1,47 @@
 body {
-  margin: 0px;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+}
+p {
+  visibility : visible;
+  position: fixed;
+  top: 10px;
+  left: 100px;
+  z-index: 100;
+}
+canvas {
+  display: block;
+  /* vertical-align: bottom; */
 }
 canvas.leap-boneHand{
   position: absolute;
-  margin: 0px;
-  border: 0;
-  overflow: hidden;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+}
+#particles-js {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: #262626;
+}
+audio {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  width: calc(100% - 20px);
+}
+#thefile {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+}
+#text {
+  position: fixed;
+  top: 10px;
+  left: 300px;
+  z-index: 100;
 }
