@@ -20,7 +20,7 @@ var pJS = function(tag_id, params){
     },
     particles: {
       number: {
-        value: 400,
+        value: 10,
         density: {
           enable: true,
           value_area: 800
@@ -92,7 +92,7 @@ var pJS = function(tag_id, params){
       events: {
         onhover: {
           enable: true,
-          mode: 'grab'
+          mode: 'repulse'
         },
         onclick: {
           enable: true,

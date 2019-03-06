@@ -3,19 +3,27 @@ body {
   padding: 0;
   height: 100vh;
 }
-/* #xCords {
+#xCords {
   color: white;
   visibility : visible;
   position: fixed;
   top: 10px;
   left: 100px;
   z-index: 100;
-} */
+}
 #currentWave {
   color: white;
   visibility : visible;
   position: fixed;
   top: 30px;
+  left: 150px;
+  z-index: 100;
+}
+#currentEffect {
+  color: white;
+  visibility : visible;
+  position: fixed;
+  top: 50px;
   left: 150px;
   z-index: 100;
 }
@@ -62,3 +70,27 @@ canvas.leap-boneHand{
     width:100%;
     background-color:white;
 }
+/* #SineText {
+  color: black;
+  visibility : visible;
+  position: relative;
+  top: 26.5%;
+  left: 71.5%;
+  z-index: 100;
+}
+#SquareText {
+  color: black;
+  visibility : visible;
+  position: relative;
+  top: 38.6%;
+  left: 69.7%;
+  z-index: 100;
+}
+#SawtoothText {
+  color: black;
+  visibility : visible;
+  position: relative;
+  top: 49.5%;
+  left: 68.1%;
+  z-index: 100;
+} */
