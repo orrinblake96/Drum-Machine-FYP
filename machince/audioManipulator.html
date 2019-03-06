@@ -1,5 +1,10 @@
 <html>
 <head>
+  <title>Sound Manipulation Machine</title>
+  <link rel="icon" 
+      type="image/png" 
+      href="./images/favicon.ico">
+
   <meta charset="utf-8">
   <script src="./js/three.js"></script>
   <script src="./js/leap-0.6.4.js"></script>
@@ -7,7 +12,8 @@
   <script src="../build/leap-widgets-0.1.0.js"></script>
   <script src="js/OrbitControls.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
-  <script type="text/javascript" src="js/effects.js"></script>
+  <script src="http://reverbjs.org/reverb.js"></script>
+  <script type="text/javascript" src="js/effectsHelper.js"></script>
   <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 
@@ -18,14 +24,20 @@
     <script type="text/javascript" src="js/app.js"></script>
   </div>
 
+  <!-- <p id="SineText">Sine Wave</p>
+  <p id="SquareText">Square Wave</p>
+  <p id="SawtoothText">Sawtooth Wave</p> -->
+
   <div id="content">
     <input type="file" id="thefile" accept="audio/*" />
     <audio controls id="audio" ></audio>
   </div>
   
   <div>
-    <p id="xCords" style="color:white;"></p>
-    <p id="currentWave" style="visibility: visible;"></p>
+    <p id="xCords" style="color:white; visibility: hidden;"></p>
+    <p id="currentWave" style="visibility: visible;" ></p>
+    <p id="currentEffect" style="visibility: visible;" ></p>
+    <p id="currentXcords" style="visibility: visible;" ></p>
   </div>
 </body>
 
@@ -36,41 +48,53 @@
     Leap.loop({
 
       hand: function(hand){
+        let effect = document.getElementById('currentEffect').innerHTML;
+        let waveType = document.getElementById('currentWave').innerHTML;
 
         if(hand.type === 'right') {
           let indexF = hand.indexFinger.direction;
-          let cords = indexF[0] * 800;
-          
+          let cords = Math.abs(indexF[0] * 800);
           document.getElementById('xCords').innerHTML = cords;
         }
 
         if (hand.type === "right") {
+          switch (effect) {
+            case 'Distortion':{
+              let indexF = hand.indexFinger.direction;
+              let distortionNode = context.createWaveShaper();
+              function playWave(tone, distortionAmount) {
+                let oscillator = context.createOscillator();
+                distortionNode.curve = makeDistortionCurve(distortionAmount);
+                oscillator.type = waveType;
+                
+                if(waveType  != ''){
+                  tone > 100 && distortionAmount > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
+                  oscillator.connect(distortionNode);
+                  oscillator.connect(context.destination);
+                  oscillator.start();
+                  oscillator.stop(context.currentTime + 0.2);
+                }
+              }
+              playWave(Math.abs((indexF[0]) * 500), Math.abs((indexF[1]) * 1000));
+              break;
+            }
+            case '':{
+              let indexF = hand.indexFinger.direction;
+              function playWave(tone, distortionAmount) {
+                let oscillator = context.createOscillator();
+                oscillator.type = waveType;
 
-        let indexF = hand.indexFinger.direction;
-        // let oscillatorGainNode = context.createGain();
-        // let distortionGainNode = context.createGain();
-        // let distortionNode = context.createWaveShaper();
-        let waveType = document.getElementById("currentWave").innerHTML;
-        console.log(waveType);
-        
-      
-        function playSineWave(tone, distortionAmount) {
-          let oscillator = context.createOscillator();
-          // distortionNode.curve = makeDistortionCurve(distortionAmount);
-
-          oscillator.type = waveType;
-          if(waveType  != ''){
-            tone > 100 && distortionAmount > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
-            // oscillator.connect(oscillatorGainNode);
-            // oscillatorGainNode.connect(distortionGainNode);
-            // distortionGainNode.connect(distortionNode);
-            // oscillator.connect(distortionNode);
-            oscillator.connect(context.destination);
-            oscillator.start();
-            oscillator.stop(context.currentTime + 0.2);
+                if(waveType  != ''){
+                  tone > 100 && distortionAmount > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
+                  oscillator.connect(context.destination);
+                  oscillator.start();
+                  oscillator.stop(context.currentTime + 0.2);
+                  }
+              }
+              playWave(Math.abs((indexF[0]) * 500), Math.abs((indexF[1]) * 1000));
+              break;
+            }
           }
-        }
-        playSineWave(Math.abs((indexF[0]) * 500), Math.abs((indexF[1]) * 1000));
       }
     }
 
@@ -265,40 +289,59 @@
     audio.load();
     var context = new AudioContext();
     var src = context.createMediaElementSource(audio);
-    var analyser = context.createAnalyser();
-
-    src.connect(analyser);
-    analyser.connect(context.destination);
-
+    src.connect(context.destination);
     audio.play();
     };
   }
 
   //Takes a buffer, sets that equal to the source, then connects source to destination (speakers, earphones, ... etc)
   //Add extra filters/synth sounds here. Then connect each filter to the destination
-  function playSound(buffer, play) {
-    var xCords = (document.getElementById('xCords').innerHTML);
+  function playSound(buffer, reverbURL) {
+    var xCords = document.getElementById('xCords').innerHTML;
+    var effect = document.getElementById('currentEffect').innerHTML;
     var audio = context.createBufferSource();
     audio.buffer = buffer;
-    var dist = context.createWaveShaper();
-    // console.log(xCords);
-    if(xCords === 0){
-      xCords = 0;
-      dist.curve = makeDistortionCurve(xCords);
-      audio.connect(dist);
-      dist.connect(context.destination);
-      audio.connect(context.destination);
-      audio.loop = play;
-      audio.start(0);
-    } else {
-      dist.curve = makeDistortionCurve(xCords);
-      audio.connect(dist);
-      dist.connect(context.destination);
-      audio.connect(context.destination);
-      audio.loop = play;
-      audio.start(0);
+    switch (effect) {
+      case 'Distortion':{
+        console.log("Distortion");
+        var dist = context.createWaveShaper();
+        dist.curve = makeDistortionCurve(xCords);
+        audio.connect(dist);
+        dist.connect(context.destination);
+        audio.connect(context.destination);
+        audio.loop = true;
+        audio.start(0);
+      }
+      break;
+      case 'Reverb':{
+        reverbjs.extend(context);
+        var reverbUrl = 'http://reverbjs.org/Library/AbernyteGrainSilo.m4a';
+        var reverbNode = context.createReverbFromUrl(reverbUrl, function() {
+          reverbNode.connect(context.destination);
+        });
+        var sourceUrl = reverbURL;
+        var audio = context.createSourceFromUrl(sourceUrl, function() {
+          audio.connect(reverbNode);
+        });
+        audio.start();
+      }
+      break;
+      case 'SpeedX2':{
+        console.log("Playback Speed X2");
+        audio.playbackRate.value = 2;
+        audio.connect(context.destination);
+        audio.loop = true;
+        audio.start(0);
+      }
+      break;
+      case '':{
+        console.log("No Effect");
+        audio.connect(context.destination);
+        audio.loop = true;
+        audio.start(0);
+      }
+      break;
     }
-    
   }
 
   function stopSound() {
@@ -318,7 +361,7 @@
   let roundButton = new PushButton(
     new InteractablePlane(buttonMesh1_1, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(mumbleBuffer, true);
+    playSound(mumbleBuffer, './pre-recordedSounds/rapMumble.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -334,7 +377,7 @@
   let roundButton1_2 = new PushButton(
     new InteractablePlane(buttonMesh1_2, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(clapBuffer, true);
+    playSound(clapBuffer, './pre-recordedSounds/clap.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -350,7 +393,7 @@
   let roundButton1_3 = new PushButton(
     new InteractablePlane(buttonMesh1_3, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(drumBeat2Buffer, true);
+    playSound(drumBeat2Buffer, './pre-recordedSounds/drumBeat2.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -366,7 +409,7 @@
   let roundButton2_1 = new PushButton(
     new InteractablePlane(buttonMesh2_1, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(percussionLowBuffer, true);
+    playSound(percussionLowBuffer, './pre-recordedSounds/percussionLow.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -382,7 +425,7 @@
   let roundButton2_2 = new PushButton(
     new InteractablePlane(buttonMesh2_2, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(rapBeat2Buffer, true);
+    playSound(rapBeat2Buffer, './pre-recordedSounds/rapBeat2.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -398,7 +441,7 @@
   let roundButton2_3 = new PushButton(
     new InteractablePlane(buttonMesh2_3, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(mumbleRapBeatBuffer, true);
+    playSound(mumbleRapBeatBuffer, './pre-recordedSounds/mumbleRapBeat.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -414,7 +457,7 @@
   let roundButton3_1 = new PushButton(
     new InteractablePlane(buttonMesh3_1, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(slowBeatBuffer, true);
+    playSound(slowBeatBuffer, './pre-recordedSounds/slowBeat.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -430,7 +473,7 @@
   let roundButton3_2 = new PushButton(
     new InteractablePlane(buttonMesh3_2, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(tinCanBuffer, true);
+    playSound(tinCanBuffer, './pre-recordedSounds/tinCanBeat.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -446,7 +489,7 @@
   let roundButton3_3 = new PushButton(
     new InteractablePlane(buttonMesh3_3, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
-    playSound(buttonBeatBuffer, true);
+    playSound(buttonBeatBuffer, './pre-recordedSounds/buttonBeat.wav');
     mesh.material.color.setHex(0xccccff);
   }).on('release', function(mesh){
     stopSound();
@@ -496,6 +539,51 @@
   }).on('release', function(mesh){
     document.getElementById("currentWave").innerHTML = "";
     mesh.material.color.setHex(0xFFFF00);
+  });
+
+  let buttonMesh5_1 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh5_1.name = 'Reverb';
+  buttonMesh5_1.material.color.setHex(0x007F00);
+  buttonMesh5_1.position.set(0.0, 0.4, -0.05);
+  scene.add(buttonMesh5_1);
+  let roundButton5_1 = new PushButton(
+    new InteractablePlane(buttonMesh5_1, Leap.loopController, {moveX: false, moveY: false})
+  ).on('press', function(mesh){
+    document.getElementById('currentEffect').innerHTML = "Reverb";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh){
+    document.getElementById('currentEffect').innerHTML = "";
+    mesh.material.color.setHex(0x007F00);
+  });
+
+  let buttonMesh5_2 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh5_2.name = 'Playback_Speed_X2';
+  buttonMesh5_2.material.color.setHex(0x007F00);
+  buttonMesh5_2.position.set(0.0, 0.325, -0.05);
+  scene.add(buttonMesh5_2);
+  let roundButton5_2 = new PushButton(
+    new InteractablePlane(buttonMesh5_2, Leap.loopController, {moveX: false, moveY: false})
+  ).on('press', function(mesh){
+    document.getElementById("currentEffect").innerHTML = "SpeedX2"
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh){
+    document.getElementById("currentEffect").innerHTML = ""
+    mesh.material.color.setHex(0x007F00);
+  });
+
+  let buttonMesh5_3 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh5_3.name = 'Distortion';
+  buttonMesh5_3.material.color.setHex(0x007F00);
+  buttonMesh5_3.position.set(0.0, 0.25, -0.05);
+  scene.add(buttonMesh5_3);
+  let roundButton5_3 = new PushButton(
+    new InteractablePlane(buttonMesh5_3, Leap.loopController, {moveX: false, moveY: false})
+  ).on('press', function(mesh){
+    document.getElementById("currentEffect").innerHTML = "Distortion"
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh){
+    document.getElementById("currentEffect").innerHTML = ""
+    mesh.material.color.setHex(0x007F00);
   });
 </script>
 
