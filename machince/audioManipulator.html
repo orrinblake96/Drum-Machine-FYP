@@ -6,21 +6,26 @@
   <script src="js/leap-plugins-0.1.11pre.js"></script>
   <script src="../build/leap-widgets-0.1.0.js"></script>
   <script src="js/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
   <script type="text/javascript" src="js/effects.js"></script>
   <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 
 <body>
-  <div id="particles-js"></div>
-  <script type="text/javascript" src="js/particles.js"></script>
-  <script type="text/javascript" src="js/app.js"></script>
+  <div>
+    <div id="particles-js"></div>
+    <script type="text/javascript" src="js/particles.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+  </div>
 
   <div id="content">
-  <input type="file" id="thefile" accept="audio/*" />
-  <audio controls id="audio" ></audio>
+    <input type="file" id="thefile" accept="audio/*" />
+    <audio controls id="audio" ></audio>
+  </div>
+  
   <div>
     <p id="xCords" style="color:white;"></p>
-    <p id="currentWave" style="visibility: hidden;"></p>
+    <p id="currentWave" style="visibility: visible;"></p>
   </div>
 </body>
 
@@ -34,37 +39,38 @@
 
         if(hand.type === 'right') {
           let indexF = hand.indexFinger.direction;
-          let cords = Math.abs(indexF[0] * 1000);
+          let cords = indexF[0] * 800;
+          
           document.getElementById('xCords').innerHTML = cords;
         }
 
         if (hand.type === "right") {
 
         let indexF = hand.indexFinger.direction;
-        let oscillatorGainNode = context.createGain();
-        let distortionGainNode = context.createGain();
-        let distortionNode = context.createWaveShaper();
+        // let oscillatorGainNode = context.createGain();
+        // let distortionGainNode = context.createGain();
+        // let distortionNode = context.createWaveShaper();
         let waveType = document.getElementById("currentWave").innerHTML;
         console.log(waveType);
         
       
         function playSineWave(tone, distortionAmount) {
           let oscillator = context.createOscillator();
-          distortionNode.curve = makeDistortionCurve(distortionAmount);
+          // distortionNode.curve = makeDistortionCurve(distortionAmount);
 
           oscillator.type = waveType;
           if(waveType  != ''){
             tone > 100 && distortionAmount > 100 ? oscillator.frequency.value = tone : oscillator.frequency.value = 0;
-            oscillator.connect(oscillatorGainNode);
-            oscillatorGainNode.connect(distortionGainNode);
-            distortionGainNode.connect(distortionNode);
-            oscillator.connect(distortionNode);
+            // oscillator.connect(oscillatorGainNode);
+            // oscillatorGainNode.connect(distortionGainNode);
+            // distortionGainNode.connect(distortionNode);
+            // oscillator.connect(distortionNode);
             oscillator.connect(context.destination);
             oscillator.start();
-            oscillator.stop(context.currentTime + 0.6);
+            oscillator.stop(context.currentTime + 0.2);
           }
         }
-        playSineWave(Math.abs((indexF[0]) * 1000), Math.abs((indexF[1]) * 2000));
+        playSineWave(Math.abs((indexF[0]) * 500), Math.abs((indexF[1]) * 1000));
       }
     }
 
@@ -79,6 +85,8 @@
         arm: true
       })
       .use('screenPosition', {positioning: 'absolute'});
+
+  // alert("Red-buttons are pre-recorded sounds, Yellow-buttons are different wave types!")
 
   // Set up scene
   var scene = Leap.loopController.plugins.boneHand.scene;
@@ -273,7 +281,7 @@
     var audio = context.createBufferSource();
     audio.buffer = buffer;
     var dist = context.createWaveShaper();
-    console.log(xCords);
+    // console.log(xCords);
     if(xCords === 0){
       xCords = 0;
       dist.curve = makeDistortionCurve(xCords);
@@ -306,7 +314,7 @@
   buttonMesh1_1.material.color.setHex(0xFF0000);
   buttonMesh1_1.position.set(-0.25, 0.4, -0.05);
   scene.add(buttonMesh1_1);
-  loadMumbleSound('./drumButtonSounds/rapMumble.wav');
+  loadMumbleSound('./pre-recordedSounds/rapMumble.wav');
   let roundButton = new PushButton(
     new InteractablePlane(buttonMesh1_1, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -322,7 +330,7 @@
   buttonMesh1_2.material.color.setHex(0xFF0000);
   buttonMesh1_2.position.set(-0.25, 0.325, -0.05);
   scene.add(buttonMesh1_2);
-  loadClapSound('./drumButtonSounds/clap.wav');
+  loadClapSound('./pre-recordedSounds/clap.wav');
   let roundButton1_2 = new PushButton(
     new InteractablePlane(buttonMesh1_2, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -338,7 +346,7 @@
   buttonMesh1_3.material.color.setHex(0xFF0000);
   buttonMesh1_3.position.set(-0.25, 0.25, -0.05);
   scene.add(buttonMesh1_3);
-  loadDrumBeat2Sound('./drumButtonSounds/drumBeat2.wav');
+  loadDrumBeat2Sound('./pre-recordedSounds/drumBeat2.wav');
   let roundButton1_3 = new PushButton(
     new InteractablePlane(buttonMesh1_3, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -354,7 +362,7 @@
   buttonMesh2_1.material.color.setHex(0xFF0000);
   buttonMesh2_1.position.set(-0.175, 0.4, -0.05);
   scene.add(buttonMesh2_1);
-  loadpercussionLowSound('./drumButtonSounds/percussionLow.wav');
+  loadpercussionLowSound('./pre-recordedSounds/percussionLow.wav');
   let roundButton2_1 = new PushButton(
     new InteractablePlane(buttonMesh2_1, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -370,7 +378,7 @@
   buttonMesh2_2.material.color.setHex(0xFF0000);
   buttonMesh2_2.position.set(-0.175, 0.325, -0.05);
   scene.add(buttonMesh2_2);
-  loadrapBeat2Sound('./drumButtonSounds/rapBeat2.wav');
+  loadrapBeat2Sound('./pre-recordedSounds/rapBeat2.wav');
   let roundButton2_2 = new PushButton(
     new InteractablePlane(buttonMesh2_2, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -386,7 +394,7 @@
   buttonMesh2_3.material.color.setHex(0xFF0000);
   buttonMesh2_3.position.set(-0.175, 0.25, -0.05);
   scene.add(buttonMesh2_3);
-  loadMumbleRapBeatSound('./drumButtonSounds/mumbleRapBeat.wav');
+  loadMumbleRapBeatSound('./pre-recordedSounds/mumbleRapBeat.wav');
   let roundButton2_3 = new PushButton(
     new InteractablePlane(buttonMesh2_3, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -402,7 +410,7 @@
   buttonMesh3_1.material.color.setHex(0xFF0000);
   buttonMesh3_1.position.set(-0.10, 0.4, -0.05);
   scene.add(buttonMesh3_1);
-  loadSlowBeatSound('./drumButtonSounds/slowBeat.wav');
+  loadSlowBeatSound('./pre-recordedSounds/slowBeat.wav');
   let roundButton3_1 = new PushButton(
     new InteractablePlane(buttonMesh3_1, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -418,7 +426,7 @@
   buttonMesh3_2.material.color.setHex(0xFF0000);
   buttonMesh3_2.position.set(-0.10, 0.325, -0.05);
   scene.add(buttonMesh3_2);
-  loadtinCanSound('./drumButtonSounds/tinCanBeat.wav');
+  loadtinCanSound('./pre-recordedSounds/tinCanBeat.wav');
   let roundButton3_2 = new PushButton(
     new InteractablePlane(buttonMesh3_2, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
@@ -434,7 +442,7 @@
   buttonMesh3_3.material.color.setHex(0xFF0000);
   buttonMesh3_3.position.set(-0.10, 0.25, -0.05);
   scene.add(buttonMesh3_3);
-  loadButtonBeatSound('./drumButtonSounds/buttonBeat.wav');
+  loadButtonBeatSound('./pre-recordedSounds/buttonBeat.wav');
   let roundButton3_3 = new PushButton(
     new InteractablePlane(buttonMesh3_3, Leap.loopController, {moveX: false, moveY: false})
   ).on('press', function(mesh){
