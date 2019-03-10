@@ -24,13 +24,38 @@
     <script type="text/javascript" src="js/app.js"></script>
   </div>
 
-  <!-- <p id="SineText">Sine Wave</p>
-  <p id="SquareText">Square Wave</p>
-  <p id="SawtoothText">Sawtooth Wave</p> -->
-
   <div id="content">
     <input type="file" id="thefile" accept="audio/*" />
     <audio controls id="audio" ></audio>
+  </div>
+
+  <button id="myBtn">Instructions</button>
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="close">&times;</span>
+        <h2>Sound Manipulation Instructions</h2>
+      </div>
+      <div class="modal-body">
+        <h3>Button types:</h3>
+        <p>Red-buttons conatin pre-recorded sounds.</p>
+        <p>Green-buttons each have an effect attached; Reverb, SpeedX2 and Distortion.</p>
+        <p>Yellow-buttons allow for choosing of different wave types; Sine, Square and Sawtooth.</p>
+
+        <h3>How to add effects:</h3>
+        <p>1: Select a desired effect from the green buttons.</p>
+        <p>2: Choose a sound from the red-buttons, or</p>
+        <p>3: Choose a wave type from the yellow-buttons</p>
+        <p>4: Pressing either should add the desired effect.</p>
+        <p>5: Distortion can be manipulated by moving right-hand to a different 
+          position on the screen and pressing sound button again.</p>
+        <p>NB: Waves can be manipulated without an effect by selecting one 
+          and moving the right-hand to a different position of the screen</p>
+      </div>
+      <div class="modal-footer">
+        <h4>Click around popup or the 'X' in the top-right corner to exit!!</h4>
+      </div>
+    </div>
   </div>
   
   <div>
@@ -43,6 +68,30 @@
 
 <script>
   'use strict';
+
+    //Instructions for the user's interactions to sound manipulation
+    var modal = document.getElementById('myModal');
+    var btn = document.getElementById("myBtn");
+    //needed to close instructions afterwards
+    var span = document.getElementsByClassName("close")[0];
+    //need function so th popup loads when the app starts up
+    function instructionPopup() {
+        modal.style.display = "block";
+    }
+    btn.onclick = function() {
+      modal.style.display = "block";
+    }
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+    $(window).bind("load", function() {
+      instructionPopup();
+    });
 
     // Set up plugins
     Leap.loop({
