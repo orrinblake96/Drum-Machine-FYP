@@ -44,10 +44,9 @@
 
       <h3>How to add effects:</h3>
       <p>1: Select a desired effect from the green buttons.</p>
-      <p>2: Choose a sound from the red-buttons, or</p>
-      <p>3: Choose a wave type from the yellow-buttons</p>
-      <p>4: Pressing either should add the desired effect.</p>
-      <p>5: Distortion can be manipulated by moving right-hand to a different 
+      <p>2: Choose a sound from the red-buttons, or choose a wave type from the yellow-buttons</p>
+      <p>3: Pressing either should add the desired effect.</p>
+      <p>4: Distortion can be manipulated by moving right-hand to a different 
         position on the screen and pressing sound button again.</p>
       <p>NB: Waves can be manipulated without an effect by selecting one 
         and moving the right-hand to a different position of the screen</p>
@@ -61,7 +60,8 @@
 <div>
   <p id="xCords" style="color:white; visibility: hidden;"></p>
   <p id="currentWave" style="visibility: visible;" ></p>
-  <p id="currentEffect" style="visibility: visible;" ></p>
+  <p id="currentPreSoundEffect" style="visibility: visible;" ></p>
+  <p id="currentWaveEffect" style="visibility: visible;" ></p>
   <p id="currentXcords" style="visibility: visible;" ></p>
 </div>
 </body>
@@ -93,23 +93,86 @@
   //   instructionPopup();
   // });
 
+  var bufferSize = 16384;
+function lowFilterPassEffect() {
+    var lastOut = 0.0;
+    var node = context.createScriptProcessor(bufferSize, 1, 1);
+    node.onaudioprocess = function(e) {
+        var input = e.inputBuffer.getChannelData(0);
+        var output = e.outputBuffer.getChannelData(0);
+        for (var i = 0; i < bufferSize; i++) {
+            output[i] = (input[i] + lastOut) / 2.0;
+            lastOut = output[i];
+        }
+    }
+    return node;
+}
+function bitCrusherEffect() {
+    var node = context.createScriptProcessor(bufferSize, 1, 1);
+    node.bits = 4; // between 1 and 16
+    node.normfreq = 0.1; // between 0.0 and 1.0
+    var step = Math.pow(1/2, node.bits);
+    var phaser = 0;
+    var last = 0;
+    node.onaudioprocess = function(e) {
+        var input = e.inputBuffer.getChannelData(0);
+        var output = e.outputBuffer.getChannelData(0);
+        for (var i = 0; i < bufferSize; i++) {
+            phaser += node.normfreq;
+            if (phaser >= 1.0) {
+                phaser -= 1.0;
+                last = step * Math.floor(input[i] / step + 0.5);
+            }
+            output[i] = last;
+        }
+    };
+    return node;
+}
+function moogEffect() {
+    var node = context.createScriptProcessor(bufferSize, 1, 1);
+    var in1, in2, in3, in4, out1, out2, out3, out4;
+    in1 = in2 = in3 = in4 = out1 = out2 = out3 = out4 = 0.0;
+    node.cutoff = 0.065; // between 0.0 and 1.0
+    node.resonance = 3.99; // between 0.0 and 4.0
+    node.onaudioprocess = function(e) {
+        var input = e.inputBuffer.getChannelData(0);
+        var output = e.outputBuffer.getChannelData(0);
+        var f = node.cutoff * 1.16;
+        var fb = node.resonance * (1.0 - 0.15 * f * f);
+        for (var i = 0; i < bufferSize; i++) {
+            input[i] -= out4 * fb;
+            input[i] *= 0.35013 * (f*f)*(f*f);
+            out1 = input[i] + 0.3 * in1 + (1 - f) * out1; // Pole 1
+            in1 = input[i];
+            out2 = out1 + 0.3 * in2 + (1 - f) * out2; // Pole 2
+            in2 = out1;
+            out3 = out2 + 0.3 * in3 + (1 - f) * out3; // Pole 3
+            in3 = out2;
+            out4 = out3 + 0.3 * in4 + (1 - f) * out4; // Pole 4
+            in4 = out3;
+            output[i] = out4;
+        }
+    }
+    return node;
+}
+
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
-  var waveContext = new AudioContext();
+  var context = new AudioContext();
 
     // Create oscillator, the sound generator
-    var oscillatorNode = waveContext.createOscillator();
+    var oscillatorNode = context.createOscillator();
 
     // Create volume node
-    var gainNode = waveContext.createGain();
+    var gainNode = context.createGain();
     gainNode.gain.value = 1;
 
     // Oscillator -> Gain -> Destination
     oscillatorNode.connect(gainNode);
     oscillatorNode.frequency.value = 0;
-    oscillatorNode.connect(waveContext.destination);
+    oscillatorNode.connect(context.destination);
     oscillatorNode.start();
     
-    gainNode.connect(waveContext.destination);
+    gainNode.connect(context.destination);
 
   // Set up plugins
   Leap.loop({
@@ -117,22 +180,32 @@
     hand: function(hand){
       // Create oscillator, the sound generator
       let wave = document.getElementById('currentWave').innerHTML;
+      let waveEffect = document.getElementById('currentWaveEffect').innerHTML;
       if(wave === ''){
         oscillatorNode.frequency.value = 0;
       } else if(wave === 'sine'){
-          oscillatorNode.type = 'sine';
-          oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          gainNode.gain.value = hand.palmPosition[1] * 1000/200;
-        }else if(wave === 'square'){
-          oscillatorNode.type = 'square';
-          oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          gainNode.gain.value = hand.palmPosition[1] * 1000/200;
-        }else if(wave === 'sawtooth'){
-          oscillatorNode.type = 'square';
-          oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          gainNode.gain.value = hand.palmPosition[1] * 1000/200;
+        switch (waveEffect) {
+          case 'Moog Filter' : {
+            oscillatorNode.type = 'sine';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+            gainNode.gain.value = hand.palmPosition[1] * 1000/200;
+          }
+          case '' :{
+            oscillatorNode.type = 'sine';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+            gainNode.gain.value = hand.palmPosition[1] * 1000/200;
+          }
         }
+      }else if(wave === 'square'){
+        oscillatorNode.type = 'square';
+        oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+        gainNode.gain.value = hand.palmPosition[1] * 1000/200;
+      }else if(wave === 'sawtooth'){
+        oscillatorNode.type = 'sawtooth';
+        oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+        gainNode.gain.value = hand.palmPosition[1] * 1000/200;
       }
+    }
   })
     .use('transform', {
       vr: 'desktop' // Switch to meters.
@@ -331,7 +404,7 @@ file.onchange = function() {
 //Add extra filters/synth sounds here. Then connect each filter to the destination
 function playSound(buffer, reverbURL) {
   var xCords = document.getElementById('xCords').innerHTML;
-  var effect = document.getElementById('currentEffect').innerHTML;
+  var effect = document.getElementById('currentPreSoundEffect').innerHTML;
   var audio = context.createBufferSource();
   audio.buffer = buffer;
   switch (effect) {
@@ -382,6 +455,14 @@ function stopSound() {
   context = new AudioContext();
 }
 
+function restartWave(){
+  oscillatorNode.stop(context.currentTime);
+  oscillatorNode = context.createOscillator();
+  oscillatorNode.frequency.value = 0;
+  oscillatorNode.connect(context.destination);
+  oscillatorNode.start();
+}
+
 let circleGeo = new THREE.CircleGeometry(0.035, 100);
 var material = new THREE.MeshPhongMaterial();
 
@@ -398,6 +479,7 @@ let roundButton = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -414,6 +496,7 @@ let roundButton1_2 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -430,6 +513,7 @@ let roundButton1_3 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -446,6 +530,7 @@ let roundButton2_1 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -462,6 +547,7 @@ let roundButton2_2 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -478,6 +564,7 @@ let roundButton2_3 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -494,6 +581,7 @@ let roundButton3_1 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -510,6 +598,7 @@ let roundButton3_2 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -526,6 +615,7 @@ let roundButton3_3 = new PushButton(
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
   stopSound();
+  restartWave()
   mesh.material.color.setHex(0xFF0000);
 });
 
@@ -541,7 +631,7 @@ let roundButton4_1 = new PushButton(
   document.getElementById("currentWave").innerHTML = "sine";
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
-  stopSoundWaves();
+  restartWave();
   document.getElementById("currentWave").innerHTML = "";
   mesh.material.color.setHex(0xFFFF00);
 });
@@ -557,7 +647,7 @@ let roundButton4_2 = new PushButton(
   document.getElementById("currentWave").innerHTML = "square";
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
-  stopSoundWaves();
+  restartWave()
   document.getElementById("currentWave").innerHTML = "";
   mesh.material.color.setHex(0xFFFF00);
 });
@@ -573,7 +663,7 @@ let roundButton4_3 = new PushButton(
   document.getElementById("currentWave").innerHTML = "sawtooth";
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
-  stopSoundWaves();
+  restartWave()
   document.getElementById("currentWave").innerHTML = "";
   mesh.material.color.setHex(0xFFFF00);
 });
@@ -583,47 +673,93 @@ let roundButton4_3 = new PushButton(
 let buttonMesh5_1 = new THREE.Mesh(circleGeo, material.clone());
 buttonMesh5_1.name = 'Reverb';
 buttonMesh5_1.material.color.setHex(0x007F00);
-buttonMesh5_1.position.set(0.0, 0.4, -0.05);
+buttonMesh5_1.position.set(-0.02, 0.4, -0.05);
 scene.add(buttonMesh5_1);
 let roundButton5_1 = new PushButton(
   new InteractablePlane(buttonMesh5_1, Leap.loopController, {moveX: false, moveY: false})
 ).on('press', function(mesh){
-  document.getElementById('currentEffect').innerHTML = "Reverb";
+  document.getElementById('currentPreSoundEffect').innerHTML = "Reverb";
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
-  document.getElementById('currentEffect').innerHTML = "";
+  document.getElementById('currentPreSoundEffect').innerHTML = "";
   mesh.material.color.setHex(0x007F00);
 });
 
 let buttonMesh5_2 = new THREE.Mesh(circleGeo, material.clone());
 buttonMesh5_2.name = 'Playback_Speed_X2';
 buttonMesh5_2.material.color.setHex(0x007F00);
-buttonMesh5_2.position.set(0.0, 0.325, -0.05);
+buttonMesh5_2.position.set(-0.02, 0.325, -0.05);
 scene.add(buttonMesh5_2);
 let roundButton5_2 = new PushButton(
   new InteractablePlane(buttonMesh5_2, Leap.loopController, {moveX: false, moveY: false})
 ).on('press', function(mesh){
-  document.getElementById("currentEffect").innerHTML = "SpeedX2"
+  document.getElementById("currentPreSoundEffect").innerHTML = "SpeedX2"
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
-  document.getElementById("currentEffect").innerHTML = ""
+  document.getElementById("currentPreSoundEffect").innerHTML = ""
   mesh.material.color.setHex(0x007F00);
 });
 
 let buttonMesh5_3 = new THREE.Mesh(circleGeo, material.clone());
 buttonMesh5_3.name = 'Distortion';
 buttonMesh5_3.material.color.setHex(0x007F00);
-buttonMesh5_3.position.set(0.0, 0.25, -0.05);
+buttonMesh5_3.position.set(-0.02, 0.25, -0.05);
 scene.add(buttonMesh5_3);
 let roundButton5_3 = new PushButton(
   new InteractablePlane(buttonMesh5_3, Leap.loopController, {moveX: false, moveY: false})
 ).on('press', function(mesh){
-  document.getElementById("currentEffect").innerHTML = "Distortion"
+  document.getElementById("currentPreSoundEffect").innerHTML = "Distortion"
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
-  document.getElementById("currentEffect").innerHTML = ""
+  document.getElementById("currentPreSoundEffect").innerHTML = ""
+  mesh.material.color.setHex(0x007F00);
+});
+
+let buttonMesh6_1 = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh6_1.name = 'LowPass';
+buttonMesh6_1.material.color.setHex(0x007F00);
+buttonMesh6_1.position.set(0.18, 0.4, -0.05);
+scene.add(buttonMesh6_1);
+let roundButton6_1 = new PushButton(
+  new InteractablePlane(buttonMesh6_1, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+  document.getElementById("currentWaveEffect").innerHTML = 'Low-pass Filter';
+  mesh.material.color.setHex(0xccccff);
+}).on('release', function(mesh){
+  document.getElementById("currentWaveEffect").innerHTML = '';
+  mesh.material.color.setHex(0x007F00);
+});
+
+let buttonMesh6_2 = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh6_2.name = 'BitCrusher';
+buttonMesh6_2.material.color.setHex(0x007F00);
+buttonMesh6_2.position.set(0.18, 0.325, -0.05);
+scene.add(buttonMesh6_2);
+let roundButton6_2 = new PushButton(
+  new InteractablePlane(buttonMesh6_2, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+  document.getElementById("currentWaveEffect").innerHTML = 'Bit-crusher Filter';
+  mesh.material.color.setHex(0xccccff);
+}).on('release', function(mesh){
+  document.getElementById("currentWaveEffect").innerHTML = '';
+  mesh.material.color.setHex(0x007F00);
+});
+
+let buttonMesh6_3 = new THREE.Mesh(circleGeo, material.clone());
+buttonMesh6_3.name = 'MoogFilter';
+buttonMesh6_3.material.color.setHex(0x007F00);
+buttonMesh6_3.position.set(0.18, 0.25, -0.05);
+scene.add(buttonMesh6_3);
+let roundButton6_3 = new PushButton(
+  new InteractablePlane(buttonMesh6_3, Leap.loopController, {moveX: false, moveY: false})
+).on('press', function(mesh){
+  document.getElementById("currentWaveEffect").innerHTML = 'Moog Filter';
+  mesh.material.color.setHex(0xccccff);
+}).on('release', function(mesh){
+  document.getElementById("currentWaveEffect").innerHTML = '';
   mesh.material.color.setHex(0x007F00);
 });
 </script>
 
 </html>
+
