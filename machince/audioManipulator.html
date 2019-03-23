@@ -158,21 +158,13 @@ function moogEffect() {
 
   window.AudioContext = window.AudioContext || window.webkitAudioContext;
   var context = new AudioContext();
-
-    // Create oscillator, the sound generator
+ 
+  // Create oscillator, the sound generator
     var oscillatorNode = context.createOscillator();
 
-    // Create volume node
-    var gainNode = context.createGain();
-    gainNode.gain.value = 1;
-
-    // Oscillator -> Gain -> Destination
-    oscillatorNode.connect(gainNode);
     oscillatorNode.frequency.value = 0;
     oscillatorNode.connect(context.destination);
     oscillatorNode.start();
-    
-    gainNode.connect(context.destination);
 
   // Set up plugins
   Leap.loop({
@@ -186,24 +178,69 @@ function moogEffect() {
       } else if(wave === 'sine'){
         switch (waveEffect) {
           case 'Moog Filter' : {
+            oscillatorNode.connect(moogEffect());
             oscillatorNode.type = 'sine';
             oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-            gainNode.gain.value = hand.palmPosition[1] * 1000/200;
+          }
+          case 'Bit-crusher Filter' : {
+            oscillatorNode.connect(bitCrusherEffect());
+            oscillatorNode.type = 'sine';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+          case 'Low-pass Filter' :{
+            oscillatorNode.connect(lowFilterPassEffect());
+            oscillatorNode.type = 'sine';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
           }
           case '' :{
             oscillatorNode.type = 'sine';
             oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-            gainNode.gain.value = hand.palmPosition[1] * 1000/200;
           }
         }
       }else if(wave === 'square'){
-        oscillatorNode.type = 'square';
-        oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-        gainNode.gain.value = hand.palmPosition[1] * 1000/200;
+        switch (waveEffect) {
+          case 'Moog Filter' : {
+            oscillatorNode.connect(moogEffect());
+            oscillatorNode.type = 'square';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+          case 'Bit-crusher Filter' : {
+            oscillatorNode.connect(bitCrusherEffect());
+            oscillatorNode.type = 'square';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+          case 'Low-pass Filter' :{
+            oscillatorNode.connect(lowFilterPassEffect());
+            oscillatorNode.type = 'square';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+          case '' :{
+            oscillatorNode.type = 'square';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+        }
       }else if(wave === 'sawtooth'){
-        oscillatorNode.type = 'sawtooth';
-        oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-        gainNode.gain.value = hand.palmPosition[1] * 1000/200;
+        switch (waveEffect) {
+          case 'Moog Filter' : {
+            oscillatorNode.connect(moogEffect());
+            oscillatorNode.type = 'sawtooth';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+          case 'Bit-crusher Filter' : {
+            oscillatorNode.connect(bitCrusherEffect());
+            oscillatorNode.type = 'sawtooth';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+          case 'Low-pass Filter' :{
+            oscillatorNode.connect(lowFilterPassEffect());
+            oscillatorNode.type = 'sawtooth';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+          case '' :{
+            oscillatorNode.type = 'sawtooth';
+            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+          }
+        }
       }
     }
   })
@@ -257,6 +294,8 @@ function loadClapSound(url) {
   request.onload = function() {
     context.decodeAudioData(request.response, function(buffer) {
       clapBuffer = buffer;
+      console.log(buffer);
+      
     });
   }
   //sends request for play function to use
@@ -272,6 +311,7 @@ function loadButtonBeatSound(url) {
   request.onload = function() {
     context.decodeAudioData(request.response, function(buffer) {
       buttonBeatBuffer = buffer;
+      console.log(buffer);
     });
   }
   //sends request for play function to use
@@ -411,7 +451,7 @@ function playSound(buffer, reverbURL) {
     case 'Distortion':{
       console.log("Distortion");
       var dist = context.createWaveShaper();
-      dist.curve = makeDistortionCurve(xCords);
+      dist.curve = makeDistortionCurve("400");
       audio.connect(dist);
       dist.connect(context.destination);
       audio.connect(context.destination);
@@ -457,6 +497,7 @@ function stopSound() {
 
 function restartWave(){
   oscillatorNode.stop(context.currentTime);
+  
   oscillatorNode = context.createOscillator();
   oscillatorNode.frequency.value = 0;
   oscillatorNode.connect(context.destination);
@@ -738,6 +779,7 @@ scene.add(buttonMesh6_2);
 let roundButton6_2 = new PushButton(
   new InteractablePlane(buttonMesh6_2, Leap.loopController, {moveX: false, moveY: false})
 ).on('press', function(mesh){
+  restartWave();
   document.getElementById("currentWaveEffect").innerHTML = 'Bit-crusher Filter';
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
@@ -753,6 +795,7 @@ scene.add(buttonMesh6_3);
 let roundButton6_3 = new PushButton(
   new InteractablePlane(buttonMesh6_3, Leap.loopController, {moveX: false, moveY: false})
 ).on('press', function(mesh){
+  restartWave();
   document.getElementById("currentWaveEffect").innerHTML = 'Moog Filter';
   mesh.material.color.setHex(0xccccff);
 }).on('release', function(mesh){
