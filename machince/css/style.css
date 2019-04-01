@@ -7,15 +7,23 @@ body {
   color: white;
   visibility : visible;
   position: fixed;
-  top: 10px;
-  left: 100px;
+  top: 30px;
+  left: 25%;
+  z-index: 100;
+}
+#xCordsPreText {
+  color: white;
+  visibility : visible;
+  position: fixed;
+  top: 30px;
+  left: 5%;
   z-index: 100;
 }
 #currentWave {
   color: white;
   visibility : visible;
   position: fixed;
-  top: 30px;
+  top: 50px;
   left: 150px;
   z-index: 100;
 }
@@ -24,7 +32,23 @@ body {
   visibility : visible;
   position: fixed;
   top: 50px;
+  left: 120px;
+  z-index: 100;
+}
+#currentPreSoundEffect {
+  color: white;
+  visibility : visible;
+  position: fixed;
+  top: 50px;
   left: 150px;
+  z-index: 100;
+}
+#currentWaveEffect {
+  color: white;
+  visibility : visible;
+  position: fixed;
+  top: 50px;
+  left: 180px;
   z-index: 100;
 }
 canvas {
