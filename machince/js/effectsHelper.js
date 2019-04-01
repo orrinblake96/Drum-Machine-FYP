@@ -14,4 +14,4 @@ function makeDistortionCurve( amount ) {
     }
     return curve;
   };
-  var bufferSize = 16384;
+  

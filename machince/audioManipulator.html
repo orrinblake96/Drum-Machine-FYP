@@ -1,74 +1,156 @@
 <html>
-<head>
-<title>Sound Manipulation Machine</title>
-<link rel="icon" 
-    type="image/png" 
-    href="./images/favicon.ico">
 
-<meta charset="utf-8">
-<script src="./js/three.js"></script>
-<script src="./js/leap-0.6.4.js"></script>
-<script src="js/leap-plugins-0.1.11pre.js"></script>
-<script src="../build/leap-widgets-0.1.0.js"></script>
-<script src="js/OrbitControls.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
-<script src="http://reverbjs.org/reverb.js"></script>
-<script type="text/javascript" src="js/effectsHelper.js"></script>
-<link rel="stylesheet" type="text/css" href="css/style.css">
+<head>
+  <title>Sound Manipulation Machine</title>
+  <link rel="icon" type="image/png" href="./images/favicon.ico">
+
+  <meta charset="utf-8">
+  <script src="./js/three.js"></script>
+  <script src="./js/leap-0.6.4.js"></script>
+  <script src="js/leap-plugins-0.1.11pre.js"></script>
+  <script src="../build/leap-widgets-0.1.0.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
+  <script src="http://reverbjs.org/reverb.js"></script>
+  <script type="text/javascript" src="js/effectsHelper.js"></script>
+  <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 
 <body>
-<div>
-  <div id="particles-js"></div>
-  <script type="text/javascript" src="js/particles.js"></script>
-  <script type="text/javascript" src="js/app.js"></script>
-</div>
+  <div>
+    <div id="particles-js"></div>
+    <script type="text/javascript" src="js/particles.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+  </div>
 
-<div id="content">
-  <input type="file" id="thefile" accept="audio/*" />
-  <audio controls id="audio" ></audio>
-</div>
+  <div id="content">
+    <input type="file" id="thefile" accept="audio/*" />
+    <audio controls id="audio"></audio>
+  </div>
 
-<button id="myBtn">Instructions</button>
-<div id="myModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <span class="close">&times;</span>
-      <h2>Sound Manipulation Instructions</h2>
-    </div>
-    <div class="modal-body">
-      <h3>Button types:</h3>
-      <p>Red-buttons conatin pre-recorded sounds.</p>
-      <p>Green-buttons each have an effect attached; Reverb, SpeedX2 and Distortion.</p>
-      <p>Yellow-buttons allow for choosing of different wave types; Sine, Square and Sawtooth.</p>
+  <button id="myBtn">Instructions</button>
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="close">&times;</span>
+        <h2>Sound Manipulation Instructions</h2>
+      </div>
+      <div class="modal-body">
+        <h3>Button types:</h3>
+        <p>Red-buttons conatin pre-recorded sounds.</p>
+        <p>Green-buttons each have an effect attached; Reverb, SpeedX2 and Distortion.</p>
+        <p>Yellow-buttons allow for choosing of different wave types; Sine, Square and Sawtooth.</p>
 
-      <h3>How to add effects:</h3>
-      <p>1: Select a desired effect from the green buttons.</p>
-      <p>2: Choose a sound from the red-buttons, or choose a wave type from the yellow-buttons</p>
-      <p>3: Pressing either should add the desired effect.</p>
-      <p>4: Distortion can be manipulated by moving right-hand to a different 
-        position on the screen and pressing sound button again.</p>
-      <p>NB: Waves can be manipulated without an effect by selecting one 
-        and moving the right-hand to a different position of the screen</p>
-    </div>
-    <div class="modal-footer">
-      <h4>Click around popup or the 'X' in the top-right corner to exit!!</h4>
+        <h3>How to add effects:</h3>
+        <p>1: Select a desired effect from the green buttons.</p>
+        <p>2: Choose a sound from the red-buttons, or</p>
+        <p>3: Choose a wave type from the yellow-buttons</p>
+        <p>4: Pressing either should add the desired effect.</p>
+        <p>5: Distortion can be manipulated by moving right-hand to a different
+          position on the screen and pressing sound button again.</p>
+        <p>NB: Waves can be manipulated without an effect by selecting one
+          and moving the right-hand to a different position of the screen</p>
+      </div>
+      <div class="modal-footer">
+        <h4>Click around popup or the 'X' in the top-right corner to exit!!</h4>
+      </div>
     </div>
   </div>
-</div>
 
-<div>
-  <p id="xCords" style="color:white; visibility: hidden;"></p>
-  <p id="currentWave" style="visibility: visible;" ></p>
-  <p id="currentPreSoundEffect" style="visibility: visible;" ></p>
-  <p id="currentWaveEffect" style="visibility: visible;" ></p>
-  <p id="currentXcords" style="visibility: visible;" ></p>
-</div>
+  <div>
+    <p id="xCords" style="color:white; visibility: hidden;"></p>
+    <p id="currentWave" style="visibility: visible;"></p>
+    <p id="currentEffect" style="visibility: visible;"></p>
+    <p id="currentXcords" style="visibility: visible;"></p>
+    <p id="currentWaveEffect"></p>
+  </div>
 </body>
 
 <script>
-'use strict';
+  'use strict';
 
+  //Setup effects for sinewaves
+  window.AudioContext = window.AudioContext || window.webkitAudioContext;
+  var waveContext = new AudioContext();
+
+  function makeDistortionCurve(amount) {
+    var k = typeof amount === 'number' ? amount : 0,
+      n_samples = 44100,
+      curve = new Float32Array(n_samples),
+      deg = Math.PI / 180,
+      i = 0,
+      x;
+    for (; i < n_samples; ++i) {
+      x = i * 2 / n_samples - 1;
+      curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  };
+
+  var bufferSize = 16384;
+
+  var moogEffect = (function() {
+    var node = waveContext.createScriptProcessor(bufferSize, 1, 1);
+    var in1, in2, in3, in4, out1, out2, out3, out4;
+    in1 = in2 = in3 = in4 = out1 = out2 = out3 = out4 = 0.0;
+    node.cutoff = 0.065; // between 0.0 and 1.0
+    node.resonance = 3.99; // between 0.0 and 4.0
+    node.onaudioprocess = function(e) {
+      var input = e.inputBuffer.getChannelData(0);
+      var output = e.outputBuffer.getChannelData(0);
+      var f = node.cutoff * 1.16;
+      var fb = node.resonance * (1.0 - 0.15 * f * f);
+      for (var i = 0; i < bufferSize; i++) {
+        input[i] -= out4 * fb;
+        input[i] *= 0.35013 * (f * f) * (f * f);
+        out1 = input[i] + 0.3 * in1 + (1 - f) * out1; // Pole 1
+        in1 = input[i];
+        out2 = out1 + 0.3 * in2 + (1 - f) * out2; // Pole 2
+        in2 = out1;
+        out3 = out2 + 0.3 * in3 + (1 - f) * out3; // Pole 3
+        in3 = out2;
+        out4 = out3 + 0.3 * in4 + (1 - f) * out4; // Pole 4
+        in4 = out3;
+        output[i] = out4;
+      }
+    }
+    return node;
+  })();
+
+  var bitCrusherEffect = (function() {
+    var node = waveContext.createScriptProcessor(bufferSize, 1, 1);
+    node.bits = 4; // between 1 and 16
+    node.normfreq = 0.1; // between 0.0 and 1.0
+    var step = Math.pow(1 / 2, node.bits);
+    var phaser = 0;
+    var last = 0;
+    node.onaudioprocess = function(e) {
+      var input = e.inputBuffer.getChannelData(0);
+      var output = e.outputBuffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++) {
+        phaser += node.normfreq;
+        if (phaser >= 1.0) {
+          phaser -= 1.0;
+          last = step * Math.floor(input[i] / step + 0.5);
+        }
+        output[i] = last;
+      }
+    };
+    return node;
+  })();
+
+  var noiseConvolvereEffect = (function() {
+    var convolver = waveContext.createConvolver(),
+      noiseBuffer = waveContext.createBuffer(2, 0.5 * waveContext.sampleRate, waveContext.sampleRate),
+      left = noiseBuffer.getChannelData(0),
+      right = noiseBuffer.getChannelData(1);
+    for (var i = 0; i < noiseBuffer.length; i++) {
+      left[i] = Math.random() * 2 - 1;
+      right[i] = Math.random() * 2 - 1;
+    }
+    convolver.buffer = noiseBuffer;
+    return convolver;
+  })();
   //Instructions for the user's interactions to sound manipulation
   var modal = document.getElementById('myModal');
   var btn = document.getElementById("myBtn");
@@ -76,7 +158,7 @@
   var span = document.getElementsByClassName("close")[0];
   //need function so th popup loads when the app starts up
   function instructionPopup() {
-      modal.style.display = "block";
+    modal.style.display = "block";
   }
   btn.onclick = function() {
     modal.style.display = "block";
@@ -89,720 +171,638 @@
       modal.style.display = "none";
     }
   }
-  // $(window).bind("load", function() {
-  //   instructionPopup();
-  // });
+  $(window).bind("load", function() {
+    instructionPopup();
+  });
 
-  var bufferSize = 16384;
-function lowFilterPassEffect() {
-    var lastOut = 0.0;
-    var node = context.createScriptProcessor(bufferSize, 1, 1);
-    node.onaudioprocess = function(e) {
-        var input = e.inputBuffer.getChannelData(0);
-        var output = e.outputBuffer.getChannelData(0);
-        for (var i = 0; i < bufferSize; i++) {
-            output[i] = (input[i] + lastOut) / 2.0;
-            lastOut = output[i];
-        }
-    }
-    return node;
-}
-function bitCrusherEffect() {
-    var node = context.createScriptProcessor(bufferSize, 1, 1);
-    node.bits = 4; // between 1 and 16
-    node.normfreq = 0.1; // between 0.0 and 1.0
-    var step = Math.pow(1/2, node.bits);
-    var phaser = 0;
-    var last = 0;
-    node.onaudioprocess = function(e) {
-        var input = e.inputBuffer.getChannelData(0);
-        var output = e.outputBuffer.getChannelData(0);
-        for (var i = 0; i < bufferSize; i++) {
-            phaser += node.normfreq;
-            if (phaser >= 1.0) {
-                phaser -= 1.0;
-                last = step * Math.floor(input[i] / step + 0.5);
-            }
-            output[i] = last;
-        }
-    };
-    return node;
-}
-function moogEffect() {
-    var node = context.createScriptProcessor(bufferSize, 1, 1);
-    var in1, in2, in3, in4, out1, out2, out3, out4;
-    in1 = in2 = in3 = in4 = out1 = out2 = out3 = out4 = 0.0;
-    node.cutoff = 0.065; // between 0.0 and 1.0
-    node.resonance = 3.99; // between 0.0 and 4.0
-    node.onaudioprocess = function(e) {
-        var input = e.inputBuffer.getChannelData(0);
-        var output = e.outputBuffer.getChannelData(0);
-        var f = node.cutoff * 1.16;
-        var fb = node.resonance * (1.0 - 0.15 * f * f);
-        for (var i = 0; i < bufferSize; i++) {
-            input[i] -= out4 * fb;
-            input[i] *= 0.35013 * (f*f)*(f*f);
-            out1 = input[i] + 0.3 * in1 + (1 - f) * out1; // Pole 1
-            in1 = input[i];
-            out2 = out1 + 0.3 * in2 + (1 - f) * out2; // Pole 2
-            in2 = out1;
-            out3 = out2 + 0.3 * in3 + (1 - f) * out3; // Pole 3
-            in3 = out2;
-            out4 = out3 + 0.3 * in4 + (1 - f) * out4; // Pole 4
-            in4 = out3;
-            output[i] = out4;
-        }
-    }
-    return node;
-}
-
-  window.AudioContext = window.AudioContext || window.webkitAudioContext;
-  var context = new AudioContext();
- 
   // Create oscillator, the sound generator
-    var oscillatorNode = context.createOscillator();
-
-    oscillatorNode.frequency.value = 0;
-    oscillatorNode.connect(context.destination);
-    oscillatorNode.start();
+  var oscillatorNode = waveContext.createOscillator();
+  oscillatorNode.frequency.value = 0;
+  oscillatorNode.connect(waveContext.destination);
+  oscillatorNode.start();
 
   // Set up plugins
   Leap.loop({
-
-    hand: function(hand){
-      // Create oscillator, the sound generator
-      let wave = document.getElementById('currentWave').innerHTML;
-      let waveEffect = document.getElementById('currentWaveEffect').innerHTML;
-      if(wave === ''){
-        oscillatorNode.frequency.value = 0;
-      } else if(wave === 'sine'){
-        switch (waveEffect) {
-          case 'Moog Filter' : {
-            oscillatorNode.connect(moogEffect());
-            oscillatorNode.type = 'sine';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case 'Bit-crusher Filter' : {
-            oscillatorNode.connect(bitCrusherEffect());
-            oscillatorNode.type = 'sine';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case 'Low-pass Filter' :{
-            oscillatorNode.connect(lowFilterPassEffect());
-            oscillatorNode.type = 'sine';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case '' :{
-            oscillatorNode.type = 'sine';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-        }
-      }else if(wave === 'square'){
-        switch (waveEffect) {
-          case 'Moog Filter' : {
-            oscillatorNode.connect(moogEffect());
+      hand: function(hand) {
+        // Create oscillator, the sound generator
+        let wave = document.getElementById('currentWave').innerHTML;
+        let waveEffect = document.getElementById('currentWaveEffect').innerHTML;
+        switch (wave) {
+          case 'sine':
+            switch (waveEffect) {
+              case 'Moog Filter':
+                oscillatorNode.type = 'sine';
+                oscillatorNode.connect(moogEffect);
+                moogEffect.connect(waveContext.destination);
+                oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+                break;
+              case 'Bit Crusher':
+                oscillatorNode.type = 'sine';
+                oscillatorNode.connect(bitCrusherEffect);
+                bitCrusherEffect.connect(waveContext.destination);
+                oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+              case 'Noise Convolver':
+                oscillatorNode.type = 'sine';
+                oscillatorNode.connect(noiseConvolvereEffect);
+                noiseConvolvereEffect.connect(waveContext.destination);
+                oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+              case '':
+                oscillatorNode.type = 'sine';
+                oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
+                break;
+            }
+          case 'square':
             oscillatorNode.type = 'square';
             oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case 'Bit-crusher Filter' : {
-            oscillatorNode.connect(bitCrusherEffect());
-            oscillatorNode.type = 'square';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case 'Low-pass Filter' :{
-            oscillatorNode.connect(lowFilterPassEffect());
-            oscillatorNode.type = 'square';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case '' :{
-            oscillatorNode.type = 'square';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-        }
-      }else if(wave === 'sawtooth'){
-        switch (waveEffect) {
-          case 'Moog Filter' : {
-            oscillatorNode.connect(moogEffect());
+            break;
+          case 'sawtooth':
             oscillatorNode.type = 'sawtooth';
             oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case 'Bit-crusher Filter' : {
-            oscillatorNode.connect(bitCrusherEffect());
-            oscillatorNode.type = 'sawtooth';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case 'Low-pass Filter' :{
-            oscillatorNode.connect(lowFilterPassEffect());
-            oscillatorNode.type = 'sawtooth';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
-          case '' :{
-            oscillatorNode.type = 'sawtooth';
-            oscillatorNode.frequency.value = hand.palmPosition[1] * 1000;
-          }
+            break;
+          case '':
+            oscillatorNode.frequency.value = 0;
+            break;
         }
       }
-    }
-  })
+    })
     .use('transform', {
       vr: 'desktop' // Switch to meters.
     })
     .use('boneHand', {
       targetEl: document.body,
       jointColor: new THREE.Color(0xffffff),
-      rendererOps: {antialias: true},
+      rendererOps: {
+        antialias: true
+      },
       arm: true
     })
-    .use('screenPosition', {positioning: 'absolute'});
-
-// Set up scene
-var scene = Leap.loopController.plugins.boneHand.scene;
-var camera = Leap.loopController.plugins.boneHand.camera;
-var renderer = Leap.loopController.plugins.boneHand.renderer;
-var sources = [];
-var hand = Leap.loopController.plugins.boneHand;
-
-//set camera to face buttons
-camera.position.set( -0.034, 0.45, 0.50 );
-  
-//create buffer for sound & setup web Audio (|| allows use on safari in the case web audio isn't available)
-window.AudioContext = window.AudioContext || window.webkitAudioContext;
-var context = new AudioContext();
-
-//all sounds are loaded here, create a 'GET' request to a set URL(maybe user input in the future)
-var mumbleBuffer = null;
-function loadMumbleSound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      mumbleBuffer = buffer;
+    .use('screenPosition', {
+      positioning: 'absolute'
     });
-  }
-  //sends request for play function to use
-  request.send();
-}
+  // Set up scene
+  var scene = Leap.loopController.plugins.boneHand.scene;
+  var camera = Leap.loopController.plugins.boneHand.camera;
+  var renderer = Leap.loopController.plugins.boneHand.renderer;
+  var sources = [];
+  var hand = Leap.loopController.plugins.boneHand;
+  //set camera to face buttons
+  camera.position.set(-0.034, 0.45, 0.50);
 
-var clapBuffer = null;
-function loadClapSound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      clapBuffer = buffer;
-      console.log(buffer);
-      
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var buttonBeatBuffer = null;
-function loadButtonBeatSound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      buttonBeatBuffer = buffer;
-      console.log(buffer);
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var drumBeat2Buffer = null;
-function loadDrumBeat2Sound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      drumBeat2Buffer = buffer;
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var percussionLowBuffer = null;
-function loadpercussionLowSound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      percussionLowBuffer = buffer;
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var rapBeat2Buffer = null;
-function loadrapBeat2Sound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      rapBeat2Buffer = buffer;
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var mumbleRapBeatBuffer = null;
-function loadMumbleRapBeatSound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      mumbleRapBeatBuffer = buffer;
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var slowBeatBuffer = null;
-function loadSlowBeatSound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      slowBeatBuffer = buffer;
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var tinCanBuffer = null;
-function loadtinCanSound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      tinCanBuffer = buffer;
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-var drumBeat2Buffer = null;
-function loadDrumBeat2Sound(url) {
-  var request = new XMLHttpRequest();
-  request.open('GET', url, true);
-  request.responseType = 'arraybuffer';
-  // Decode asynchronously, can also decode outise of load function
-  request.onload = function() {
-    context.decodeAudioData(request.response, function(buffer) {
-      drumBeat2Buffer = buffer;
-    });
-  }
-  //sends request for play function to use
-  request.send();
-}
-
-//load user added sound
-window.onload = function() {
-
-var file = document.getElementById("thefile");
-var audio = document.getElementById("audio");
-
-file.onchange = function() {
-  var files = this.files;
-  audio.src = URL.createObjectURL(files[0]);
-  audio.load();
+  //create buffer for sound & setup web Audio (|| allows use on safari in the case web audio isn't available)
+  window.AudioContext = window.AudioContext || window.webkitAudioContext;
   var context = new AudioContext();
-  var src = context.createMediaElementSource(audio);
-  src.connect(context.destination);
-  audio.play();
-  };
-}
+  //all sounds are loaded here, create a 'GET' request to a set URL(maybe user input in the future)
+  var mumbleBuffer = null;
 
-//Takes a buffer, sets that equal to the source, then connects source to destination (speakers, earphones, ... etc)
-//Add extra filters/synth sounds here. Then connect each filter to the destination
-function playSound(buffer, reverbURL) {
-  var xCords = document.getElementById('xCords').innerHTML;
-  var effect = document.getElementById('currentPreSoundEffect').innerHTML;
-  var audio = context.createBufferSource();
-  audio.buffer = buffer;
-  switch (effect) {
-    case 'Distortion':{
-      console.log("Distortion");
-      var dist = context.createWaveShaper();
-      dist.curve = makeDistortionCurve("400");
-      audio.connect(dist);
-      dist.connect(context.destination);
-      audio.connect(context.destination);
-      audio.loop = true;
-      audio.start(0);
-    }
-    break;
-    case 'Reverb':{
-      reverbjs.extend(context);
-      var reverbUrl = 'http://reverbjs.org/Library/AbernyteGrainSilo.m4a';
-      var reverbNode = context.createReverbFromUrl(reverbUrl, function() {
-        reverbNode.connect(context.destination);
+  function loadMumbleSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        mumbleBuffer = buffer;
       });
-      var sourceUrl = reverbURL;
-      var audio = context.createSourceFromUrl(sourceUrl, function() {
-        audio.connect(reverbNode);
-      });
-      audio.start();
     }
-    break;
-    case 'SpeedX2':{
-      console.log("Playback Speed X2");
-      audio.playbackRate.value = 2;
-      audio.connect(context.destination);
-      audio.loop = true;
-      audio.start(0);
-    }
-    break;
-    case '':{
-      console.log("No Effect");
-      audio.connect(context.destination);
-      audio.loop = true;
-      audio.start(0);
-    }
-    break;
+    //sends request for play function to use
+    request.send();
   }
-}
+  var clapBuffer = null;
 
-function stopSound() {
-  context.close();
-  context = new AudioContext();
-}
+  function loadClapSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        clapBuffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var buttonBeatBuffer = null;
 
-function restartWave(){
-  oscillatorNode.stop(context.currentTime);
-  
-  oscillatorNode = context.createOscillator();
-  oscillatorNode.frequency.value = 0;
-  oscillatorNode.connect(context.destination);
-  oscillatorNode.start();
-}
+  function loadButtonBeatSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        buttonBeatBuffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var drumBeat2Buffer = null;
 
-let circleGeo = new THREE.CircleGeometry(0.035, 100);
-var material = new THREE.MeshPhongMaterial();
+  function loadDrumBeat2Sound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        drumBeat2Buffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var percussionLowBuffer = null;
 
-var buttonMesh1_1 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh1_1.name = 'button1-1';
-buttonMesh1_1.material.color.setHex(0xFF0000);
-buttonMesh1_1.position.set(-0.25, 0.4, -0.05);
-scene.add(buttonMesh1_1);
-loadMumbleSound('./pre-recordedSounds/rapMumble.wav');
-let roundButton = new PushButton(
-  new InteractablePlane(buttonMesh1_1, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(mumbleBuffer, './pre-recordedSounds/rapMumble.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  function loadpercussionLowSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        percussionLowBuffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var rapBeat2Buffer = null;
 
-var buttonMesh1_2 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh1_2.name = 'button1-2';
-buttonMesh1_2.material.color.setHex(0xFF0000);
-buttonMesh1_2.position.set(-0.25, 0.325, -0.05);
-scene.add(buttonMesh1_2);
-loadClapSound('./pre-recordedSounds/clap.wav');
-let roundButton1_2 = new PushButton(
-  new InteractablePlane(buttonMesh1_2, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(clapBuffer, './pre-recordedSounds/clap.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  function loadrapBeat2Sound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        rapBeat2Buffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var mumbleRapBeatBuffer = null;
 
-let buttonMesh1_3 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh1_3.name = 'button1-3';
-buttonMesh1_3.material.color.setHex(0xFF0000);
-buttonMesh1_3.position.set(-0.25, 0.25, -0.05);
-scene.add(buttonMesh1_3);
-loadDrumBeat2Sound('./pre-recordedSounds/drumBeat2.wav');
-let roundButton1_3 = new PushButton(
-  new InteractablePlane(buttonMesh1_3, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(drumBeat2Buffer, './pre-recordedSounds/drumBeat2.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  function loadMumbleRapBeatSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        mumbleRapBeatBuffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var slowBeatBuffer = null;
 
-let buttonMesh2_1 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh2_1.name = 'button2-1';
-buttonMesh2_1.material.color.setHex(0xFF0000);
-buttonMesh2_1.position.set(-0.175, 0.4, -0.05);
-scene.add(buttonMesh2_1);
-loadpercussionLowSound('./pre-recordedSounds/percussionLow.wav');
-let roundButton2_1 = new PushButton(
-  new InteractablePlane(buttonMesh2_1, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(percussionLowBuffer, './pre-recordedSounds/percussionLow.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  function loadSlowBeatSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        slowBeatBuffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var tinCanBuffer = null;
 
-let buttonMesh2_2 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh2_2.name = 'button2-2';
-buttonMesh2_2.material.color.setHex(0xFF0000);
-buttonMesh2_2.position.set(-0.175, 0.325, -0.05);
-scene.add(buttonMesh2_2);
-loadrapBeat2Sound('./pre-recordedSounds/rapBeat2.wav');
-let roundButton2_2 = new PushButton(
-  new InteractablePlane(buttonMesh2_2, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(rapBeat2Buffer, './pre-recordedSounds/rapBeat2.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  function loadtinCanSound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        tinCanBuffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  var drumBeat2Buffer = null;
 
-let buttonMesh2_3 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh2_3.name = 'button2-3';
-buttonMesh2_3.material.color.setHex(0xFF0000);
-buttonMesh2_3.position.set(-0.175, 0.25, -0.05);
-scene.add(buttonMesh2_3);
-loadMumbleRapBeatSound('./pre-recordedSounds/mumbleRapBeat.wav');
-let roundButton2_3 = new PushButton(
-  new InteractablePlane(buttonMesh2_3, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(mumbleRapBeatBuffer, './pre-recordedSounds/mumbleRapBeat.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  function loadDrumBeat2Sound(url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+    // Decode asynchronously, can also decode outise of load function
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        drumBeat2Buffer = buffer;
+      });
+    }
+    //sends request for play function to use
+    request.send();
+  }
+  //load user added sound
+  window.onload = function() {
+    var file = document.getElementById("thefile");
+    var audio = document.getElementById("audio");
+    file.onchange = function() {
+      var files = this.files;
+      audio.src = URL.createObjectURL(files[0]);
+      audio.load();
+      var context = new AudioContext();
+      var src = context.createMediaElementSource(audio);
+      src.connect(context.destination);
+      audio.play();
+    };
+  }
+  //Takes a buffer, sets that equal to the source, then connects source to destination (speakers, earphones, ... etc)
+  //Add extra filters/synth sounds here. Then connect each filter to the destination
+  function playSound(buffer, reverbURL) {
+    var xCords = document.getElementById('xCords').innerHTML;
+    var effect = document.getElementById('currentEffect').innerHTML;
+    var audio = context.createBufferSource();
+    audio.buffer = buffer;
+    switch (effect) {
+      case 'Distortion':
+        {
+          console.log("Distortion");
+          var dist = context.createWaveShaper();
+          dist.curve = makeDistortionCurve(xCords);
+          audio.connect(dist);
+          dist.connect(context.destination);
+          audio.connect(context.destination);
+          audio.loop = true;
+          audio.start(0);
+        }
+        break;
+      case 'Reverb':
+        {
+          reverbjs.extend(context);
+          var reverbUrl = 'http://reverbjs.org/Library/AbernyteGrainSilo.m4a';
+          var reverbNode = context.createReverbFromUrl(reverbUrl, function() {
+            reverbNode.connect(context.destination);
+          });
+          var sourceUrl = reverbURL;
+          var audio = context.createSourceFromUrl(sourceUrl, function() {
+            audio.connect(reverbNode);
+          });
+          audio.start();
+        }
+        break;
+      case 'SpeedX2':
+        {
+          console.log("Playback Speed X2");
+          audio.playbackRate.value = 2;
+          audio.connect(context.destination);
+          audio.loop = true;
+          audio.start(0);
+        }
+        break;
+      case '':
+        {
+          console.log("No Effect");
+          audio.connect(context.destination);
+          audio.loop = true;
+          audio.start(0);
+        }
+        break;
+    }
+  }
 
-let buttonMesh3_1 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh3_1.name = 'button3-1';
-buttonMesh3_1.material.color.setHex(0xFF0000);
-buttonMesh3_1.position.set(-0.10, 0.4, -0.05);
-scene.add(buttonMesh3_1);
-loadSlowBeatSound('./pre-recordedSounds/slowBeat.wav');
-let roundButton3_1 = new PushButton(
-  new InteractablePlane(buttonMesh3_1, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(slowBeatBuffer, './pre-recordedSounds/slowBeat.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  function stopSound() {
+    context.close();
+    context = new AudioContext();
+  }
 
-let buttonMesh3_2 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh3_2.name = 'button3-2';
-buttonMesh3_2.material.color.setHex(0xFF0000);
-buttonMesh3_2.position.set(-0.10, 0.325, -0.05);
-scene.add(buttonMesh3_2);
-loadtinCanSound('./pre-recordedSounds/tinCanBeat.wav');
-let roundButton3_2 = new PushButton(
-  new InteractablePlane(buttonMesh3_2, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(tinCanBuffer, './pre-recordedSounds/tinCanBeat.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  let circleGeo = new THREE.CircleGeometry(0.035, 100);
+  var material = new THREE.MeshPhongMaterial();
+  var buttonMesh1_1 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh1_1.name = 'button1-1';
+  buttonMesh1_1.material.color.setHex(0xFF0000);
+  buttonMesh1_1.position.set(-0.25, 0.4, -0.05);
+  scene.add(buttonMesh1_1);
+  loadMumbleSound('./pre-recordedSounds/rapMumble.wav');
+  let roundButton = new PushButton(
+    new InteractablePlane(buttonMesh1_1, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(mumbleBuffer, './pre-recordedSounds/rapMumble.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  var buttonMesh1_2 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh1_2.name = 'button1-2';
+  buttonMesh1_2.material.color.setHex(0xFF0000);
+  buttonMesh1_2.position.set(-0.25, 0.325, -0.05);
+  scene.add(buttonMesh1_2);
+  loadClapSound('./pre-recordedSounds/clap.wav');
+  let roundButton1_2 = new PushButton(
+    new InteractablePlane(buttonMesh1_2, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(clapBuffer, './pre-recordedSounds/clap.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  let buttonMesh1_3 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh1_3.name = 'button1-3';
+  buttonMesh1_3.material.color.setHex(0xFF0000);
+  buttonMesh1_3.position.set(-0.25, 0.25, -0.05);
+  scene.add(buttonMesh1_3);
+  loadDrumBeat2Sound('./pre-recordedSounds/drumBeat2.wav');
+  let roundButton1_3 = new PushButton(
+    new InteractablePlane(buttonMesh1_3, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(drumBeat2Buffer, './pre-recordedSounds/drumBeat2.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  let buttonMesh2_1 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh2_1.name = 'button2-1';
+  buttonMesh2_1.material.color.setHex(0xFF0000);
+  buttonMesh2_1.position.set(-0.175, 0.4, -0.05);
+  scene.add(buttonMesh2_1);
+  loadpercussionLowSound('./pre-recordedSounds/percussionLow.wav');
+  let roundButton2_1 = new PushButton(
+    new InteractablePlane(buttonMesh2_1, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(percussionLowBuffer, './pre-recordedSounds/percussionLow.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  let buttonMesh2_2 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh2_2.name = 'button2-2';
+  buttonMesh2_2.material.color.setHex(0xFF0000);
+  buttonMesh2_2.position.set(-0.175, 0.325, -0.05);
+  scene.add(buttonMesh2_2);
+  loadrapBeat2Sound('./pre-recordedSounds/rapBeat2.wav');
+  let roundButton2_2 = new PushButton(
+    new InteractablePlane(buttonMesh2_2, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(rapBeat2Buffer, './pre-recordedSounds/rapBeat2.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  let buttonMesh2_3 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh2_3.name = 'button2-3';
+  buttonMesh2_3.material.color.setHex(0xFF0000);
+  buttonMesh2_3.position.set(-0.175, 0.25, -0.05);
+  scene.add(buttonMesh2_3);
+  loadMumbleRapBeatSound('./pre-recordedSounds/mumbleRapBeat.wav');
+  let roundButton2_3 = new PushButton(
+    new InteractablePlane(buttonMesh2_3, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(mumbleRapBeatBuffer, './pre-recordedSounds/mumbleRapBeat.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  let buttonMesh3_1 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh3_1.name = 'button3-1';
+  buttonMesh3_1.material.color.setHex(0xFF0000);
+  buttonMesh3_1.position.set(-0.10, 0.4, -0.05);
+  scene.add(buttonMesh3_1);
+  loadSlowBeatSound('./pre-recordedSounds/slowBeat.wav');
+  let roundButton3_1 = new PushButton(
+    new InteractablePlane(buttonMesh3_1, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(slowBeatBuffer, './pre-recordedSounds/slowBeat.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  let buttonMesh3_2 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh3_2.name = 'button3-2';
+  buttonMesh3_2.material.color.setHex(0xFF0000);
+  buttonMesh3_2.position.set(-0.10, 0.325, -0.05);
+  scene.add(buttonMesh3_2);
+  loadtinCanSound('./pre-recordedSounds/tinCanBeat.wav');
+  let roundButton3_2 = new PushButton(
+    new InteractablePlane(buttonMesh3_2, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(tinCanBuffer, './pre-recordedSounds/tinCanBeat.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  let buttonMesh3_3 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh3_3.name = 'button3-3';
+  buttonMesh3_3.material.color.setHex(0xFF0000);
+  buttonMesh3_3.position.set(-0.10, 0.25, -0.05);
+  scene.add(buttonMesh3_3);
+  loadButtonBeatSound('./pre-recordedSounds/buttonBeat.wav');
+  let roundButton3_3 = new PushButton(
+    new InteractablePlane(buttonMesh3_3, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    playSound(buttonBeatBuffer, './pre-recordedSounds/buttonBeat.wav');
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    stopSound();
+    mesh.material.color.setHex(0xFF0000);
+  });
+  //Buttons for Waves
+  let buttonMesh4_1 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh4_1.name = 'button4-1';
+  buttonMesh4_1.material.color.setHex(0xFFFF00);
+  buttonMesh4_1.position.set(0.10, 0.4, -0.05);
+  scene.add(buttonMesh4_1);
+  let roundButton4_1 = new PushButton(
+    new InteractablePlane(buttonMesh4_1, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentWave").innerHTML = "sine";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentWave").innerHTML = "";
+    mesh.material.color.setHex(0xFFFF00);
+  });
+  let buttonMesh4_2 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh4_2.name = 'button4-2';
+  buttonMesh4_2.material.color.setHex(0xFFFF00);
+  buttonMesh4_2.position.set(0.10, 0.325, -0.05);
+  scene.add(buttonMesh4_2);
+  let roundButton4_2 = new PushButton(
+    new InteractablePlane(buttonMesh4_2, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentWave").innerHTML = "square";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentWave").innerHTML = "";
+    mesh.material.color.setHex(0xFFFF00);
+  });
+  let buttonMesh4_3 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh4_3.name = 'button4-3';
+  buttonMesh4_3.material.color.setHex(0xFFFF00);
+  buttonMesh4_3.position.set(0.10, 0.25, -0.05);
+  scene.add(buttonMesh4_3);
+  let roundButton4_3 = new PushButton(
+    new InteractablePlane(buttonMesh4_3, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentWave").innerHTML = "sawtooth";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentWave").innerHTML = "";
+    mesh.material.color.setHex(0xFFFF00);
+  });
 
-let buttonMesh3_3 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh3_3.name = 'button3-3';
-buttonMesh3_3.material.color.setHex(0xFF0000);
-buttonMesh3_3.position.set(-0.10, 0.25, -0.05);
-scene.add(buttonMesh3_3);
-loadButtonBeatSound('./pre-recordedSounds/buttonBeat.wav');
-let roundButton3_3 = new PushButton(
-  new InteractablePlane(buttonMesh3_3, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  playSound(buttonBeatBuffer, './pre-recordedSounds/buttonBeat.wav');
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  stopSound();
-  restartWave()
-  mesh.material.color.setHex(0xFF0000);
-});
+  //Buttons for Waves with Effects
+  let noiseConvolverButton = new THREE.Mesh(circleGeo, material.clone());
+  noiseConvolverButton.name = 'LowPass';
+  noiseConvolverButton.material.color.setHex(0x007F00);
+  noiseConvolverButton.position.set(0.18, 0.4, -0.05);
+  scene.add(noiseConvolverButton);
+  let noise_Convolver_Button = new PushButton(
+    new InteractablePlane(noiseConvolverButton, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentWaveEffect").innerHTML = "Noise Convolver";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentWaveEffect").innerHTML = "";
+    mesh.material.color.setHex(0x007F00);
+  });
 
-//Buttons for Waves
-let buttonMesh4_1 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh4_1.name = 'button4-1';
-buttonMesh4_1.material.color.setHex(0xFFFF00);
-buttonMesh4_1.position.set(0.10, 0.4, -0.05);
-scene.add(buttonMesh4_1);
-let roundButton4_1 = new PushButton(
-  new InteractablePlane(buttonMesh4_1, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  document.getElementById("currentWave").innerHTML = "sine";
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  restartWave();
-  document.getElementById("currentWave").innerHTML = "";
-  mesh.material.color.setHex(0xFFFF00);
-});
+  let bitCrusherButton = new THREE.Mesh(circleGeo, material.clone());
+  bitCrusherButton.name = 'bitCrusher';
+  bitCrusherButton.material.color.setHex(0x007F00);
+  bitCrusherButton.position.set(0.18, 0.325, -0.05);
+  scene.add(bitCrusherButton);
+  let bit_Crusher_Button = new PushButton(
+    new InteractablePlane(bitCrusherButton, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentWaveEffect").innerHTML = "Bit Crusher";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentWaveEffect").innerHTML = "";
+    mesh.material.color.setHex(0x007F00);
+  });
 
-let buttonMesh4_2 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh4_2.name = 'button4-2';
-buttonMesh4_2.material.color.setHex(0xFFFF00);
-buttonMesh4_2.position.set(0.10, 0.325, -0.05);
-scene.add(buttonMesh4_2);
-let roundButton4_2 = new PushButton(
-  new InteractablePlane(buttonMesh4_2, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  document.getElementById("currentWave").innerHTML = "square";
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  restartWave()
-  document.getElementById("currentWave").innerHTML = "";
-  mesh.material.color.setHex(0xFFFF00);
-});
+  let moogButton = new THREE.Mesh(circleGeo, material.clone());
+  moogButton.name = 'moogFilter';
+  moogButton.material.color.setHex(0x007F00);
+  moogButton.position.set(0.18, 0.25, -0.05);
+  scene.add(moogButton);
+  let moog_Button = new PushButton(
+    new InteractablePlane(moogButton, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentWaveEffect").innerHTML = "Moog Filter";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentWaveEffect").innerHTML = "";
+    mesh.material.color.setHex(0x007F00);
+  });
 
-let buttonMesh4_3 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh4_3.name = 'button4-3';
-buttonMesh4_3.material.color.setHex(0xFFFF00);
-buttonMesh4_3.position.set(0.10, 0.25, -0.05);
-scene.add(buttonMesh4_3);
-let roundButton4_3 = new PushButton(
-  new InteractablePlane(buttonMesh4_3, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  document.getElementById("currentWave").innerHTML = "sawtooth";
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  restartWave()
-  document.getElementById("currentWave").innerHTML = "";
-  mesh.material.color.setHex(0xFFFF00);
-});
+  //***********************************//
+  //Buttons for Effects
+  //***********************************//
+  let buttonMesh5_1 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh5_1.name = 'Reverb';
+  buttonMesh5_1.material.color.setHex(0x007F00);
+  buttonMesh5_1.position.set(-0.02, 0.4, -0.05);
+  scene.add(buttonMesh5_1);
+  let roundButton5_1 = new PushButton(
+    new InteractablePlane(buttonMesh5_1, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById('currentEffect').innerHTML = "Reverb";
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById('currentEffect').innerHTML = "";
+    mesh.material.color.setHex(0x007F00);
+  });
 
+  let buttonMesh5_2 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh5_2.name = 'Playback_Speed_X2';
+  buttonMesh5_2.material.color.setHex(0x007F00);
+  buttonMesh5_2.position.set(-0.02, 0.325, -0.05);
+  scene.add(buttonMesh5_2);
+  let roundButton5_2 = new PushButton(
+    new InteractablePlane(buttonMesh5_2, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentEffect").innerHTML = "SpeedX2"
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentEffect").innerHTML = ""
+    mesh.material.color.setHex(0x007F00);
+  });
 
-//Buttons for Effects
-let buttonMesh5_1 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh5_1.name = 'Reverb';
-buttonMesh5_1.material.color.setHex(0x007F00);
-buttonMesh5_1.position.set(-0.02, 0.4, -0.05);
-scene.add(buttonMesh5_1);
-let roundButton5_1 = new PushButton(
-  new InteractablePlane(buttonMesh5_1, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  document.getElementById('currentPreSoundEffect').innerHTML = "Reverb";
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  document.getElementById('currentPreSoundEffect').innerHTML = "";
-  mesh.material.color.setHex(0x007F00);
-});
-
-let buttonMesh5_2 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh5_2.name = 'Playback_Speed_X2';
-buttonMesh5_2.material.color.setHex(0x007F00);
-buttonMesh5_2.position.set(-0.02, 0.325, -0.05);
-scene.add(buttonMesh5_2);
-let roundButton5_2 = new PushButton(
-  new InteractablePlane(buttonMesh5_2, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  document.getElementById("currentPreSoundEffect").innerHTML = "SpeedX2"
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  document.getElementById("currentPreSoundEffect").innerHTML = ""
-  mesh.material.color.setHex(0x007F00);
-});
-
-let buttonMesh5_3 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh5_3.name = 'Distortion';
-buttonMesh5_3.material.color.setHex(0x007F00);
-buttonMesh5_3.position.set(-0.02, 0.25, -0.05);
-scene.add(buttonMesh5_3);
-let roundButton5_3 = new PushButton(
-  new InteractablePlane(buttonMesh5_3, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  document.getElementById("currentPreSoundEffect").innerHTML = "Distortion"
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  document.getElementById("currentPreSoundEffect").innerHTML = ""
-  mesh.material.color.setHex(0x007F00);
-});
-
-let buttonMesh6_1 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh6_1.name = 'LowPass';
-buttonMesh6_1.material.color.setHex(0x007F00);
-buttonMesh6_1.position.set(0.18, 0.4, -0.05);
-scene.add(buttonMesh6_1);
-let roundButton6_1 = new PushButton(
-  new InteractablePlane(buttonMesh6_1, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  document.getElementById("currentWaveEffect").innerHTML = 'Low-pass Filter';
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  document.getElementById("currentWaveEffect").innerHTML = '';
-  mesh.material.color.setHex(0x007F00);
-});
-
-let buttonMesh6_2 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh6_2.name = 'BitCrusher';
-buttonMesh6_2.material.color.setHex(0x007F00);
-buttonMesh6_2.position.set(0.18, 0.325, -0.05);
-scene.add(buttonMesh6_2);
-let roundButton6_2 = new PushButton(
-  new InteractablePlane(buttonMesh6_2, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  restartWave();
-  document.getElementById("currentWaveEffect").innerHTML = 'Bit-crusher Filter';
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  document.getElementById("currentWaveEffect").innerHTML = '';
-  mesh.material.color.setHex(0x007F00);
-});
-
-let buttonMesh6_3 = new THREE.Mesh(circleGeo, material.clone());
-buttonMesh6_3.name = 'MoogFilter';
-buttonMesh6_3.material.color.setHex(0x007F00);
-buttonMesh6_3.position.set(0.18, 0.25, -0.05);
-scene.add(buttonMesh6_3);
-let roundButton6_3 = new PushButton(
-  new InteractablePlane(buttonMesh6_3, Leap.loopController, {moveX: false, moveY: false})
-).on('press', function(mesh){
-  restartWave();
-  document.getElementById("currentWaveEffect").innerHTML = 'Moog Filter';
-  mesh.material.color.setHex(0xccccff);
-}).on('release', function(mesh){
-  document.getElementById("currentWaveEffect").innerHTML = '';
-  mesh.material.color.setHex(0x007F00);
-});
+  let buttonMesh5_3 = new THREE.Mesh(circleGeo, material.clone());
+  buttonMesh5_3.name = 'Distortion';
+  buttonMesh5_3.material.color.setHex(0x007F00);
+  buttonMesh5_3.position.set(-0.02, 0.25, -0.05);
+  scene.add(buttonMesh5_3);
+  let roundButton5_3 = new PushButton(
+    new InteractablePlane(buttonMesh5_3, Leap.loopController, {
+      moveX: false,
+      moveY: false
+    })
+  ).on('press', function(mesh) {
+    document.getElementById("currentEffect").innerHTML = "Distortion"
+    mesh.material.color.setHex(0xccccff);
+  }).on('release', function(mesh) {
+    document.getElementById("currentEffect").innerHTML = ""
+    mesh.material.color.setHex(0x007F00);
+  });
 </script>
 
 </html>
-

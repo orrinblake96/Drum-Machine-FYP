@@ -27,6 +27,14 @@ body {
   left: 150px;
   z-index: 100;
 }
+#currentEffect {
+  color: white;
+  visibility : visible;
+  position: fixed;
+  top: 50px;
+  left: 120px;
+  z-index: 100;
+}
 #currentPreSoundEffect {
   color: white;
   visibility : visible;
