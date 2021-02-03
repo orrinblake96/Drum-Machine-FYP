@@ -1,0 +1,1 @@
+Folder that contains images of the app in action.
