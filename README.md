@@ -9,6 +9,6 @@
 ## How To Run:
 
 1. Clone the repo to your machine.
-2. Open the cloned repo locally and navigate to "/machine/audiomanipulator.html".
+2. Open the cloned repo locally and navigate to "/machine/index.html".
 
 ![](images/Screenshot%202021-02-03%20at%2012.04.10.png)
